@@ -14,8 +14,8 @@ class TestMacroF1:
 
     def test_known_value(self) -> None:
         # y_true=[1,1,0,0], y_pred=[1,0,0,0]:
-        # F1(pos)=2*1/(2+1)=2/3, F1(neg)=2*2/(2+2)=1 -> macro=5/6
-        assert macro_f1([1, 1, 0, 0], [1, 0, 0, 0]) == pytest.approx(5 / 6)
+        # F1(pos)=2/3 (tp=1, fp=0, fn=1), F1(neg)=4/5 (tp=2, fp=1, fn=0)
+        assert macro_f1([1, 1, 0, 0], [1, 0, 0, 0]) == pytest.approx(11 / 15)
 
     def test_length_mismatch_and_empty(self) -> None:
         with pytest.raises(ValueError):
@@ -49,7 +49,8 @@ class TestFairness:
     def test_single_class_group_is_nan(self) -> None:
         import math
 
-        masks = [True, True, True, False, False, False]  # group has only positives
+        # Group = only example 0, whose label is 1 -> no negative in group.
+        masks = [True, False, False, False, False, False]
         assert math.isnan(subgroup_auc(self.y_true, self.scores, masks))
 
     def test_bpsn_bnsp_bounds(self) -> None:

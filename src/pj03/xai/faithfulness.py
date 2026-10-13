@@ -26,9 +26,9 @@ def _safe_probs(p: float) -> float:
 
 
 def comprehensiveness(
-    predict_probs: "callable[[str], float]",
+    predict_probs: callable[[str], float],
     tokens: list[str],
-    attribution: "list[float] | np.ndarray",
+    attribution: list[float] | np.ndarray,
     k: int = 3,
 ) -> float:
     """Comprehensiveness of an attribution for P(hateful).
@@ -67,9 +67,9 @@ def comprehensiveness(
 
 
 def sufficiency(
-    predict_probs: "callable[[str], float]",
+    predict_probs: callable[[str], float],
     tokens: list[str],
-    attribution: "list[float] | np.ndarray",
+    attribution: list[float] | np.ndarray,
     k: int = 3,
 ) -> float:
     """Sufficiency of an attribution for P(hateful).

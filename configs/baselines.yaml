@@ -9,9 +9,10 @@ baselines:
     strip_mentions: false
 
   encoders:
-    - bert-base-multilingual-cased   # mBERT
-    - xlm-roberta-base               # XLM-R
-    - google/muril-base-cased        # MuRIL
+    models:
+      - bert-base-multilingual-cased   # mBERT
+      - xlm-roberta-base               # XLM-R
+      - google/muril-base-cased        # MuRIL
     learning_rate: 2.0e-05
     batch_size: 16
     epochs: 3

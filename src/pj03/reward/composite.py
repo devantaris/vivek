@@ -6,7 +6,8 @@ and can be overridden per run.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from pj03.reward.r_bias import r_bias
 from pj03.reward.r_faith import r_faith
@@ -76,5 +77,5 @@ def batch_rewards(
     weights = (config or {}).get("reward", {}).get("weights", None)
     return [
         composite_reward(gen, gold, weights, predict_probs)
-        for gen, gold in zip(generations, gold_labels)
+        for gen, gold in zip(generations, gold_labels, strict=False)
     ]

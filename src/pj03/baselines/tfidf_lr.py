@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def build_pipeline(

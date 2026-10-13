@@ -8,7 +8,6 @@ model code, so downstream phases never depend on dataset-specific formats.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -56,8 +55,8 @@ class Example(BaseModel):
     language: Language = Language.UNKNOWN
     source_dataset: str = Field(min_length=1)
     split: Split
-    rationale_mask: Optional[list[int]] = None
-    target_group: Optional[str] = None
+    rationale_mask: list[int] | None = None
+    target_group: str | None = None
 
     @field_validator("label")
     @classmethod
@@ -68,7 +67,7 @@ class Example(BaseModel):
 
     @field_validator("rationale_mask")
     @classmethod
-    def _mask_indices_nonnegative(cls, value: Optional[list[int]]) -> Optional[list[int]]:
+    def _mask_indices_nonnegative(cls, value: list[int] | None) -> list[int] | None:
         if value is not None and any(i < 0 for i in value):
             raise ValueError("rationale_mask indices must be non-negative")
         return value

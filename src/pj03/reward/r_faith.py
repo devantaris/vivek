@@ -19,7 +19,7 @@ from __future__ import annotations
 def r_faith(
     generation: str,
     gold_label: int,
-    predict_probs: "callable[[str], float] | None" = None,
+    predict_probs: callable[[str], float] | None = None,
 ) -> float:
     """Reward for rationale faithfulness.
 

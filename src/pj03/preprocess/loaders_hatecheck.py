@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from pj03.preprocess.schema import DatasetStats, Example, Split
+from pj03.preprocess.schema import DatasetStats, Example
 
 
 def iter_examples() -> Iterator[Example]:

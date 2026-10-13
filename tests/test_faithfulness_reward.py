@@ -48,10 +48,11 @@ class TestCompositeReward:
 
     def test_composite_known_value(self) -> None:
         # default weights alpha=1, beta=0.5, gamma=0.3
-        # r_label(GOOD,1)=1, r_faith placeholder=0.5,
-        # r_bias: no identity terms in rationale -> 1.0
+        # r_label(GOOD,1)=1, r_faith placeholder=0.5; GOOD's rationale
+        # ("the post uses a slur against women") has 7 tokens, 1 identity
+        # term ("women") -> r_bias = 1 - 1/7 = 6/7.
         value = composite_reward(GOOD, 1)
-        assert value == pytest.approx(1.0 + 0.5 * 0.5 - 0.3 * 1.0)
+        assert value == pytest.approx(1.0 + 0.5 * 0.5 - 0.3 * (6 / 7))
 
     def test_bias_penalty_kicks_in(self) -> None:
         gen = "Label: 1\nRationale: mentions muslim people"
