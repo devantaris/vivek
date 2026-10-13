@@ -4,7 +4,10 @@ One entry per meaningful experiment/run. Keep it honest: negative results too.
 
 | Date | Phase | What | Config/commit | Result | Notes |
 |---|---|---|---|---|---|
-| 2026-10-14 | setup | Repo scaffold created; core utilities implemented + smoke-tested | initial commit | — | No training yet |
+| 2026-10-14 | setup | Repo scaffold created; core utilities implemented + smoke-tested | `20b0be3` | — | No training yet |
+| 2026-10-14 | p1 | HateXplain downloaded (via parquet conversion) + build step + EDA stats | this session | train 15,383; 31% hateful | datasets>=3 can't load script datasets — use `refs/convert/parquet` |
+| 2026-10-14 | p1 | TF-IDF+LogReg baseline on HateXplain test | default `baselines.yaml` | **macro-F1 0.799, AUC 0.891, acc 0.825** | results in `data/processed/results/tfidf_lr_hatexplain.json` |
+| 2026-10-14 | p4 | HateCheck downloaded (3,728 cases) | — | — | eval-only, never train on it |
 
 ## Open decisions
 

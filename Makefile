@@ -33,6 +33,7 @@ format:
 
 data:
 	$(PYTHON) scripts/download_data.py
+	$(PYTHON) scripts/build_data.py
 
 baseline:
 	$(PYTHON) scripts/run_baseline.py

@@ -43,9 +43,17 @@ def download_hatexplain(out_dir: Path) -> None:
     target = out_dir / "hatexplain"
     target.mkdir(parents=True, exist_ok=True)
     try:
-        # Public loader exists on the HF hub: `Hate-speech-CNERG/hatexplain`.
-        # (ID taken from the HF hub catalogue; verify at download time.)
-        dataset = load_dataset("Hate-speech-CNERG/hatexplain")
+        # HateXplain is a script-based dataset (unsupported since datasets 3.x),
+        # so we read the hub's auto-converted parquet files directly.
+        base = "hf://datasets/Hate-speech-CNERG/hatexplain@refs/convert/parquet/plain_text"
+        dataset = load_dataset(
+            "parquet",
+            data_files={
+                "train": f"{base}/train/0000.parquet",
+                "validation": f"{base}/validation/0000.parquet",
+                "test": f"{base}/test/0000.parquet",
+            },
+        )
         for split, part in dataset.items():
             path = target / f"{split}.jsonl"
             part.to_json(path)
