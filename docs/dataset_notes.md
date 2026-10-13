@@ -22,7 +22,10 @@
   - `target_group` = communities named by ≥ half the annotators, '|'-joined.
 - **Processed stats (train):** 4,748 hateful / 10,635 non-hateful (~31%);
   rationale masks present for 9,132 posts; top targets: african, islam,
-  jewish, homosexual, women.
+  jewish, homosexual, women. Mean length 23.5 tokens (max 165).
+- **Derived artifacts:** `data/processed/sft_hatexplain/{train,validation}.jsonl`
+  (Phase-2 prompt/completion pairs; 8,862 train records carry annotator
+  rationales, the rest use template rationales).
 
 ## 2. HASOC (Hindi / English / code-mixed tracks)
 

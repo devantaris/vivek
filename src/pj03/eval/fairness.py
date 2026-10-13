@@ -1,18 +1,27 @@
 """Fairness / bias audit metrics (implemented): subgroup AUC, BPSN, BNSP.
 
-References: Borkan et al., 2019, "Nuanced Metrics for Measuring Unintended
+Reference: Borkan et al., 2019, "Nuanced Metrics for Measuring Unintended
 Bias with Real Evaluation Data" (Jigsaw / Civil Comments).
 
-All three metrics use only P(hateful) scores and group membership:
+All three metrics use only P(hateful) scores and group membership, and all
+follow the "higher is better" convention:
 
-- Subgroup AUC: AUC within the examples of one identity group. Low = the
-  model cannot distinguish hateful vs non-hateful *within* the group.
-- BPSN (Background Positive, Subgroup Negative): AUC between the combined
-  negatives of the subgroup and positives of the background. Low = the model
-  scores non-hateful in-group posts high (over-predicting on the identity).
-- BNSP (Background Negative, Subgroup Positive): AUC between the combined
-  negatives of the background and positives of the subgroup. Low = hateful
-  in-group posts are scored low (missing in-group hate).
+- Subgroup AUC: AUC computed *within* one identity group's examples only.
+  Low = the model cannot distinguish hateful vs non-hateful inside the group.
+- BPSN (Background Positive, Subgroup Negative): AUC over exactly two sets —
+  background positives (hateful, not in group) vs subgroup negatives
+  (non-hateful, in group). The positive class is the background positive.
+  Low = non-hateful posts that merely *mention* the identity score as high as
+  genuinely hateful background posts (identity-term false-positive bias).
+- BNSP (Background Negative, Subgroup Positive): AUC over background
+  negatives (non-hateful, not in group) vs subgroup positives (hateful, in
+  group). The positive class is the subgroup positive. Low = hateful posts
+  targeting the group score below ordinary non-hateful posts (missing
+  in-group hate).
+
+Each pair metric uses ONLY its two named sets (this is what makes them
+independent diagnostics; pooling all four sets would collapse BPSN and BNSP
+into complements of each other and destroy their meaning).
 """
 
 from __future__ import annotations
@@ -25,11 +34,24 @@ from sklearn.metrics import roc_auc_score
 _Score = Sequence[float]
 
 
-def _pair_auc(labels: np.ndarray, scores: np.ndarray) -> float:
-    """AUC for a binary-labeled pair set; returns NaN if only one class present."""
-    if len(np.unique(labels)) < 2:
+def _pair_auc(positive_scores: np.ndarray, negative_scores: np.ndarray) -> float:
+    """AUC of P(pos > neg) over exactly two score sets; NaN if a side is empty."""
+    if len(positive_scores) == 0 or len(negative_scores) == 0:
         return float("nan")
+    labels = np.concatenate([np.ones(len(positive_scores)), np.zeros(len(negative_scores))])
+    scores = np.concatenate([positive_scores, negative_scores])
     return float(roc_auc_score(labels, scores))
+
+
+def _arrays(
+    y_true: Sequence[int], scores: _Score, is_group: Sequence[bool]
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    y_arr = np.asarray(y_true, dtype=int)
+    s_arr = np.asarray(scores, dtype=float)
+    g_arr = np.asarray(is_group, dtype=bool)
+    if not (len(y_arr) == len(s_arr) == len(g_arr)):
+        raise ValueError("y_true, scores and is_group must have the same length")
+    return y_arr, s_arr, g_arr
 
 
 def subgroup_auc(
@@ -47,12 +69,8 @@ def subgroup_auc(
     Returns:
         Subgroup AUC in [0, 1], or NaN if the subgroup lacks both classes.
     """
-    y_arr = np.asarray(y_true, dtype=int)
-    s_arr = np.asarray(scores, dtype=float)
-    g_arr = np.asarray(is_group, dtype=bool)
-    if not (len(y_arr) == len(s_arr) == len(g_arr)):
-        raise ValueError("y_true, scores and is_group must have the same length")
-    return _pair_auc(y_arr[g_arr], s_arr[g_arr])
+    y_arr, s_arr, g_arr = _arrays(y_true, scores, is_group)
+    return _pair_auc(s_arr[g_arr & (y_arr == 1)], s_arr[g_arr & (y_arr == 0)])
 
 
 def bpsn_auc(
@@ -60,22 +78,15 @@ def bpsn_auc(
     scores: _Score,
     is_group: Sequence[bool],
 ) -> float:
-    """BPSN AUC: subgroup negatives vs background positives.
+    """BPSN AUC: background positives vs subgroup negatives.
 
-    Low BPSN means non-hateful posts mentioning the identity group are being
-    scored as hateful (false positives on the group).
-
-    Returns:
-        AUC in [0, 1], or NaN if a side is empty or single-class.
+    Positive class = background positives (hateful, not in group);
+    negative class = subgroup negatives (non-hateful, in group).
+    High = benign identity-mentioning posts are scored below hateful
+    background posts (desired).
     """
-    y_arr = np.asarray(y_true, dtype=int)
-    s_arr = np.asarray(scores, dtype=float)
-    g_arr = np.asarray(is_group, dtype=bool)
-    if not (len(y_arr) == len(s_arr) == len(g_arr)):
-        raise ValueError("y_true, scores and is_group must have the same length")
-    # 0 = subgroup non-hateful, 1 = background hateful.
-    labels = np.where(g_arr, 1 - y_arr, y_arr)
-    return _pair_auc(labels, s_arr)
+    y_arr, s_arr, g_arr = _arrays(y_true, scores, is_group)
+    return _pair_auc(s_arr[(~g_arr) & (y_arr == 1)], s_arr[g_arr & (y_arr == 0)])
 
 
 def bnsp_auc(
@@ -83,22 +94,14 @@ def bnsp_auc(
     scores: _Score,
     is_group: Sequence[bool],
 ) -> float:
-    """BNSP AUC: background negatives vs subgroup positives.
+    """BNSP AUC: subgroup positives vs background negatives.
 
-    Low BNSP means hateful posts targeting the group are being scored as
-    non-hateful (false negatives on the group).
-
-    Returns:
-        AUC in [0, 1], or NaN if a side is empty or single-class.
+    Positive class = subgroup positives (hateful, in group); negative class =
+    background negatives (non-hateful, not in group). High = hateful posts
+    targeting the group are scored above benign background posts (desired).
     """
-    y_arr = np.asarray(y_true, dtype=int)
-    s_arr = np.asarray(scores, dtype=float)
-    g_arr = np.asarray(is_group, dtype=bool)
-    if not (len(y_arr) == len(s_arr) == len(g_arr)):
-        raise ValueError("y_true, scores and is_group must have the same length")
-    # 0 = background non-hateful, 1 = subgroup hateful.
-    labels = np.where(g_arr, y_arr, 1 - y_arr)
-    return _pair_auc(labels, s_arr)
+    y_arr, s_arr, g_arr = _arrays(y_true, scores, is_group)
+    return _pair_auc(s_arr[g_arr & (y_arr == 1)], s_arr[(~g_arr) & (y_arr == 0)])
 
 
 def bias_audit(
@@ -115,7 +118,7 @@ def bias_audit(
 
     Returns:
         ``{group_name: {"subgroup_auc": ..., "bpsn_auc": ..., "bnsp_auc": ...}}``
-        where NaN marks an undefined AUC (group too small / single-class).
+        where NaN marks an undefined AUC (a needed set is empty).
     """
     return {
         name: {

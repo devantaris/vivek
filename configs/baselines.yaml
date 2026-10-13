@@ -17,8 +17,22 @@ baselines:
     batch_size: 16
     epochs: 3
     max_length: 256
+    # CPU smoke config: tiny model + small subset, validates the whole
+    # Trainer path in seconds without loading the full-size encoders.
+    smoke:
+      enabled: false
+      model_name: google/bert_uncased_L-2_H-128_A-2   # tiny (4MB); bert-tiny lacks tokenizer.json for transformers 5
+      n_train: 200
+      n_eval: 100
+      epochs: 1
+      batch_size: 16
 
 datasets:
   # Which processed datasets feed Phase 1 training; fill in as loaders land.
   train: [hatexplain]
   eval: [hatexplain]
+
+# Early bias signal for baselines: membership = these terms appear in
+# target_group (must match target_group values in the unified schema).
+bias_audit:
+  terms: [african, islam, jewish, homosexual, women, refugee, arab]
