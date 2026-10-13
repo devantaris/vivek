@@ -47,6 +47,9 @@ class Example(BaseModel):
             tokenisation is fixed - document the choice in the loader.
         target_group: Optional identity group targeted (e.g. ``women``,
             ``muslims``); used for the bias audit in Phase 4.
+        functionality: Optional HateCheck functional-test type (e.g.
+            ``derog_neg_emote_h``); only set for HateCheck cases, used for
+            per-functionality failure rates in Phase 4.
     """
 
     id: str = Field(min_length=1)
@@ -57,6 +60,7 @@ class Example(BaseModel):
     split: Split
     rationale_mask: list[int] | None = None
     target_group: str | None = None
+    functionality: str | None = None
 
     @field_validator("label")
     @classmethod
