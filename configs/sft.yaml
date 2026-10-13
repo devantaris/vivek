@@ -17,4 +17,16 @@ sft:
     dropout: 0.05
     target_modules: [q_proj, k_proj, v_proj, o_proj]
 
+  # CPU smoke config: tiny GPT-2 validates the peft/trl SFT path in seconds.
+  smoke:
+    enabled: false
+    model_name: sshleifer/tiny-gpt2
+    n_train: 64
+    epochs: 1
+    batch_size: 8
+    max_length: 192
+    lora_r: 8
+    lora_alpha: 16
+    target_modules: [c_attn]
+
 output_dir: checkpoints/sft
