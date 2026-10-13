@@ -1,0 +1,23 @@
+# Phase 1 baselines.
+
+baselines:
+  tfidf_lr:
+    ngram_range: [1, 2]
+    max_features: 50000
+    C: 1.0
+    class_weight: balanced
+    strip_mentions: false
+
+  encoders:
+    - bert-base-multilingual-cased   # mBERT
+    - xlm-roberta-base               # XLM-R
+    - google/muril-base-cased        # MuRIL
+    learning_rate: 2.0e-05
+    batch_size: 16
+    epochs: 3
+    max_length: 256
+
+datasets:
+  # Which processed datasets feed Phase 1 training; fill in as loaders land.
+  train: [hatexplain]
+  eval: [hatexplain]

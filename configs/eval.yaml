@@ -1,0 +1,23 @@
+# Phase 4: XAI, faithfulness, bias audit, HateCheck, OOD.
+
+xai:
+  method: integrated_gradients   # or shap
+  n_steps: 50
+
+faithfulness:
+  # k = number of top-attributed tokens removed/kept
+  k: 3
+
+bias_audit:
+  # Identity groups to audit; must match target_group values in the schema.
+  groups: [religion, gender, caste, nationality, sexuality]
+
+hatecheck:
+  report_path: data/processed/hatecheck_report.json
+
+ood:
+  pairs:
+    - train: [hatexplain]
+      test: [hasoc]
+    - train: [hasoc]
+      test: [hatexplain]

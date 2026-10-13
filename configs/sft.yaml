@@ -1,0 +1,20 @@
+# Phase 2: LoRA SFT of a small instruction-tuned LLM.
+
+sft:
+  # DECISION NEEDED: pick one 1-3B instruction model (licence + access).
+  # Candidates: Qwen/Qwen2.5-1.5B-Instruct, meta-llama/Llama-3.2-1B-Instruct
+  # (gated), google/gemma-2-2b-it (gated).
+  model_name: Qwen/Qwen2.5-1.5B-Instruct
+  max_length: 512
+  learning_rate: 2.0e-04
+  batch_size: 8
+  gradient_accumulation: 2
+  epochs: 3
+
+  lora:
+    r: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules: [q_proj, k_proj, v_proj, o_proj]
+
+output_dir: checkpoints/sft

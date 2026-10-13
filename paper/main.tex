@@ -1,0 +1,75 @@
+% =====================================================================
+% PJ-03: Hate Speech Detection through Explainable AI and
+%        Reward-Optimized LLMs — ACL-style skeleton
+%
+% TODO (before first compile):
+%   Download the official ACL style files from the ACL style repository:
+%     https://github.com/acl-org/acl-style-files
+%   and place `acl.sty` and `acl_natbib.bst` next to this file.
+%   (Not bundled here to avoid redistributing outdated versions.)
+% =====================================================================
+\documentclass[11pt]{article}
+\usepackage[final]{acl}          % TODO: requires acl.sty (see header comment)
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+
+\title{Hate Speech Detection through Explainable AI and Reward-Optimized LLMs}
+
+\author{Devansh Kumar \and Ayush \and Saksham Tyagi \and Mudit Agrawal \\
+  Project PJ-03 \\
+  Bennett University \\
+  Supervisor: Dr. Pradeepika Verma}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+TODO: One paragraph. Motivation (hate speech in English and Hinglish social
+media), the approach (rationale-generating classifier, LoRA SFT +
+reward-optimised post-training with a composite reward), the XAI/bias audit
+methodology, and the headline result placeholder.
+\end{abstract}
+
+\section{Introduction}
+TODO: Problem, why Hinglish code-mixing is hard, why rationales matter for
+moderation workflows, contributions list.
+
+\section{Related Work}
+TODO: Hate speech detection (English, Hindi/Hinglish); rationale-based and
+explainable classification; reward optimisation (RLHF/GRPO/DPO); faithfulness
+metrics; bias audit metrics.
+
+\section{Method}
+TODO: Unified schema, Phase-1 baselines, Phase-2 LoRA SFT with fixed
+Label/Rationale output format, Phase-3 composite reward
+$R = \alpha R_{\text{label}} + \beta R_{\text{faith}} - \gamma R_{\text{bias}}$,
+Phase-4 XAI and audit setup.
+
+\section{Experiments}
+TODO: Datasets and splits, models, training details, evaluation protocol.
+
+\section{Results}
+TODO: Main table (macro-F1 per model per language), reward-ablation table.
+
+\section{Analysis}
+TODO: Faithfulness results (comprehensiveness/sufficiency), bias audit
+(subgroup AUC, BPSN/BNSP), HateCheck per-functionality failures, OOD results.
+
+\section{Ethics}
+TODO: Offensive content warning, research-use-only statement, human-in-the-
+loop moderation stance, annotation subjectivity, bias risks. See
+\texttt{docs/ethics.md} in the repository.
+
+\section{Limitations}
+TODO: Binary labelling simplification, dataset licence/access constraints,
+small-LM scale, subjective rationales, language coverage.
+
+\section*{References}
+\bibliography{references}
+
+\end{document}

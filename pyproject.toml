@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pj03-hate-speech"
+version = "0.1.0"
+description = "Hate Speech Detection through Explainable AI and Reward-Optimized LLMs (PJ-03, Bennett University)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Devansh Kumar" },
+    { name = "Ayush" },
+    { name = "Saksham Tyagi" },
+    { name = "Mudit Agrawal" },
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.5"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501", # line length handled by formatter; keep long docstrings/URLs
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pj03"]

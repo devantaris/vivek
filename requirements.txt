@@ -1,0 +1,31 @@
+# PJ-03 requirements.
+# Minimum-version (>=) constraints on purpose: verified mutually compatible at
+# those versions; newer releases are allowed. Regenerate exact pins with
+# `pip freeze > requirements.lock` after a known-good install if reproducibility
+# is needed.
+
+# Core DL stack (CPU-safe; GPU wheels are chosen by the installed torch)
+torch>=2.2
+transformers>=4.44
+datasets>=2.20
+peft>=0.12
+trl>=0.9
+accelerate>=0.33
+
+# Classical ML / data
+scikit-learn>=1.4
+pandas>=2.0
+numpy>=1.26
+
+# XAI (Phase 4)
+shap>=0.44
+captum>=0.7
+
+# Utilities
+pydantic>=2.7
+pyyaml>=6.0
+tqdm>=4.66
+
+# Dev tooling
+pytest>=8.0
+ruff>=0.5

@@ -1,0 +1,52 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# --- Data (contents gitignored; .gitkeep kept via negation) ---
+data/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+# --- Model outputs / experiments ---
+checkpoints/
+wandb/
+logs/
+mlruns/
+outputs/
+
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- LaTeX ---
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.synctex.gz
+paper/*.toc
+paper/*.nav
+paper/*.snm
+paper/*.vrb

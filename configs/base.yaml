@@ -1,0 +1,21 @@
+# PJ-03 base config: shared defaults inherited / duplicated by phase configs.
+
+project: pj03-hate-speech
+seed: 42
+
+paths:
+  raw_data: data/raw
+  interim_data: data/interim
+  processed_data: data/processed
+  checkpoints: checkpoints
+  logs: logs
+  figures: paper/figures
+
+labels:
+  hateful: 1
+  non_hateful: 0
+
+languages:
+  - en
+  - hi
+  - hinglish

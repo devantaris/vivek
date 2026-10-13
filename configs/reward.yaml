@@ -1,0 +1,20 @@
+# Phase 3: reward-optimised post-training (GRPO / DPO via TRL).
+
+reward:
+  # R = alpha*R_label + beta*R_faith - gamma*R_bias
+  weights:
+    alpha: 1.0
+    beta: 0.5
+    gamma: 0.3
+
+train:
+  # DECISION NEEDED: GRPO preferred; fall back to DPO if unstable.
+  algorithm: grpo
+  model_name: checkpoints/sft          # SFT adapter from Phase 2
+  num_generations: 8
+  learning_rate: 2.0e-06
+  kl_coef: 0.04
+  batch_size: 4
+  epochs: 1
+
+output_dir: checkpoints/reward
