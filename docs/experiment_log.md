@@ -12,6 +12,10 @@ One entry per meaningful experiment/run. Keep it honest: negative results too.
 | 2026-10-14 | p1 | Per-group bias audit of TF-IDF baseline (test, corrected metrics) | `baselines.yaml` terms | subgroup AUC 0.71–0.83 (arab lowest); **BPSN low: jewish 0.65, african 0.70** (identity-mention false positives); **BNSP low: refugee 0.72, women 0.80** (missed in-group hate) | saved in `results/tfidf_lr_hatexplain.json`; R_bias in Phase 3 targets exactly this |
 | 2026-10-14 | p1 | Encoder fine-tuning implemented (HF Trainer); CPU smoke validated | `smoke.enabled=true` | tiny-BERT 200-ex path runs end-to-end in ~1s | smoke validates plumbing only; full mBERT/XLM-R/MuRIL need GPU |
 | 2026-10-14 | p2 | SFT dataset built from HateXplain rationales | `scripts/build_sft.py` | 15,383 train / 1,922 val records; 8,862 train with annotator rationales | completions round-trip through the reward parser (tested) |
+| 2026-10-14 | p1 | HateCheck loader implemented (unified schema + `functionality` field) | `2adf604` | 3,728 cases, 29 functionalities, normalised targets | eval-only, all TEST split |
+| 2026-10-14 | p3 | **R_faith implemented for real**: remove the rationale's content words from the post, reward = \|ΔP(hateful)\| | `2d1dfba` | faithful rationale ≈ 0.85 vs boilerplate = 0 on toy model | `post_text` threaded through composite/batch rewards |
+| 2026-10-14 | p2 | **LoRA SFT implemented** with plain HF Trainer + completion-only masking | `a02a72b` | CPU smoke (tiny-gpt2, 64 recs): trains + saves adapter in ~3s | TRL 1.15 SFTTrainer crashes on Windows (Linux-only Triton kernel) — documented; TRL still planned for GRPO on Linux GPU |
+| 2026-10-14 | tooling | `scripts/summarize_results.py` aggregates all result JSONs into one table | this session | 3 experiments tracked so far | — |
 
 ## Open decisions
 
