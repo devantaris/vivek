@@ -7,6 +7,9 @@ baselines:
     C: 1.0
     class_weight: balanced
     strip_mentions: false
+    # char_wb 2-5 grams boost macro-F1 (~0.812) and catch obfuscation;
+    # the paper's word-only baseline is char_features: false.
+    char_features: true
 
   encoders:
     models:

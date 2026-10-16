@@ -58,6 +58,7 @@ def run_tfidf(config: dict) -> dict[str, float]:
         C=params["C"],
         class_weight=params["class_weight"],
         seed=config.get("seed", 42),
+        char_features=params.get("char_features", False),
     )
     pipe.fit(train_texts, train_labels)
     predictions = pipe.predict(test_texts)

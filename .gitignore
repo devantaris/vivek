@@ -50,3 +50,4 @@ paper/*.toc
 paper/*.nav
 paper/*.snm
 paper/*.vrb
+artifacts/
