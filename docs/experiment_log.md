@@ -15,7 +15,10 @@ One entry per meaningful experiment/run. Keep it honest: negative results too.
 | 2026-10-14 | p1 | HateCheck loader implemented (unified schema + `functionality` field) | `2adf604` | 3,728 cases, 29 functionalities, normalised targets | eval-only, all TEST split |
 | 2026-10-14 | p3 | **R_faith implemented for real**: remove the rationale's content words from the post, reward = \|ΔP(hateful)\| | `2d1dfba` | faithful rationale ≈ 0.85 vs boilerplate = 0 on toy model | `post_text` threaded through composite/batch rewards |
 | 2026-10-14 | p2 | **LoRA SFT implemented** with plain HF Trainer + completion-only masking | `a02a72b` | CPU smoke (tiny-gpt2, 64 recs): trains + saves adapter in ~3s | TRL 1.15 SFTTrainer crashes on Windows (Linux-only Triton kernel) — documented; TRL still planned for GRPO on Linux GPU |
-| 2026-10-14 | tooling | `scripts/summarize_results.py` aggregates all result JSONs into one table | this session | 3 experiments tracked so far | — |
+| 2026-10-16 | tooling | `scripts/summarize_results.py` aggregates all result JSONs into one table | this session | 3 experiments tracked so far | — |
+| 2026-10-14 | p3 | GRPO implemented (trl.GRPOTrainer + composite reward via TRL contract); contract validated on CPU with simulated trainer calls | `fa5e87b`, `2553957` | reward ranking correct: faithful>boilerplate>wrong-label | GPU-only; runbook written |
+| 2026-10-16 | demo | **Demo product**: char_wb n-grams added → macro-F1 **0.8115** (word-only 0.799); joblib artifact + Gradio app (rationale highlights, live faithfulness, bias audit tab) | `9932c4a`, `8d53f45` | "kill all jews" 0.93 P, comp 0.93 | demo trains in ~30s CPU; `make demo` |
+| 2026-10-16 | demo | 'i hate women' scores 0.37 = labelled *offensive* (not hatespeech) by HateXplain majority → maps to 0 | — | — | kept as the annotation-subjectivity talking point in the demo |
 
 ## Open decisions
 

@@ -1,7 +1,7 @@
 PYTHON ?= python
 PIP ?= $(PYTHON) -m pip
 
-.PHONY: setup test lint format data baseline sft reward eval help
+.PHONY: setup test lint format data baseline sft reward eval demo artifact help
 
 help:
 	@echo "PJ-03 targets:"
@@ -10,10 +10,12 @@ help:
 	@echo "  lint      - ruff check"
 	@echo "  format    - ruff format + fix"
 	@echo "  data      - download datasets (manual steps printed where needed)"
-	@echo "  baseline  - Phase 1 baselines (stub until implemented)"
-	@echo "  sft       - Phase 2 LoRA SFT (stub)"
-	@echo "  reward    - Phase 3 GRPO/DPO (stub)"
-	@echo "  eval      - Phase 4 evaluation (stub)"
+	@echo "  baseline  - Phase 1 baselines"
+	@echo "  sft       - Phase 2 LoRA SFT"
+	@echo "  reward    - Phase 3 GRPO/DPO"
+	@echo "  eval      - Phase 4 evaluation"
+	@echo "  artifact  - train + persist the demo model (CPU, ~30s)"
+	@echo "  demo      - launch the Gradio demo app"
 
 setup:
 	$(PYTHON) -m venv .venv
@@ -46,3 +48,9 @@ reward:
 
 eval:
 	$(PYTHON) scripts/run_eval.py
+
+artifact:
+	$(PYTHON) scripts/train_demo_model.py
+
+demo:
+	$(PYTHON) scripts/demo_app.py

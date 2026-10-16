@@ -22,6 +22,28 @@ and access requirements.
 > ⚠️ **Content warning:** this research involves offensive/hateful text.
 > Research use only — see `docs/ethics.md`.
 
+## Demo (demonstrable product)
+
+A Gradio web app wraps the trained TF-IDF+LogReg classifier (word + char
+n-grams, **macro-F1 0.812** on HateXplain test) with:
+
+- **Classify & explain** — probability + highlighted token attributions
+  (each n-gram's exact tfidf×weight contribution to the decision) and
+  **live faithfulness metrics** (comprehensiveness/sufficiency computed on
+  your input).
+- **Model card & fairness** — test metrics plus the per-group bias audit
+  (subgroup AUC, BPSN, BNSP) with plain-language interpretation.
+- Ethics banner on every page: research prototype, supports (not replaces)
+  human moderators, annotation is subjective.
+
+```bash
+make demo        # trains the artifact if missing (~30s), then opens the UI
+```
+
+Screenshots for slides: `demo screenshots coming — capture from the UI`.
+Roadmap: LoRA-LLM natural-language rationales and GRPO reward-optimised
+versions will slot into the same interface.
+
 ## Repository layout
 
 ```
