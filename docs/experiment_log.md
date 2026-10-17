@@ -22,6 +22,10 @@ One entry per meaningful experiment/run. Keep it honest: negative results too.
 | 2026-10-17 | product | PII scrubber (email/url/mention/phone → placeholders); decision logs always scrubbed | `61ab65b` | 8 tests | raw user text never persisted |
 | 2026-10-17 | product | FastAPI service: /predict (per-request threshold), /health, JSONL decision log, Dockerfile | `7a0246d` | 6 tests incl. PII-never-stored | `make serve`; docs at /docs |
 | 2026-10-17 | product | Release gate (quality+fairness floors, `make gate`): PASS on current model (F1 0.810, worst subgroup 0.717, BPSN 0.696, BNSP 0.743); FAIL verified with impossible floors | `68eb5a1` | exit codes 0/1 verified both ways | CI hook for all future models |
+| 2026-10-17 | product | Human-in-the-loop review queue: feedback store, /queue + /feedback endpoints, `make review` UI | `fa50269` | full cycle tested: predict→queue→confirm/override→empty queue, override rate tracked | overrides = training signal |
+| 2026-10-17 | product | Drift monitor: decision-log analytics + alert thresholds, exit 1 on alert | `65c98c2`,`f156301`,`54ec710` | hateful-rate/PII/latency/override alerts tested | weekly CI candidate |
+| 2026-10-17 | legal | Licence audit written (docs/licence_audit.md): HateCheck CC BY 4.0 verified; HateXplain platform-ToS risk → models are research artefacts; product path = customer/licensed data | `ec0d23f` | — | human actions pending: HASOC terms, Hinglish choice, base-model card check |
+| 2026-10-17 | paper | Full paper draft (Intro/Related/Method/Experiments/Results table/Analysis/Ethics/Limitations) with real numbers; bib cleaned (MuRIL/XLM-R/BERT/LoRA/Bohra) | `8152bf6` | TODOs only where GPU runs pending | acl.sty still to download |
 
 ## Open decisions
 

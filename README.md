@@ -75,6 +75,27 @@ ways: passes on the current model, fails with clear per-gate reasons when
 floors are impossible. Every future model (SFT, GRPO) must clear this gate
 before shipping.
 
+## Human-in-the-loop review (`make review`)
+
+The moderation workflow closes the loop: while the API serves predictions,
+the review app shows the unreviewed decision queue (scrubbed text, model
+label, probability, rationale, faithfulness). Moderators confirm or override;
+every override is logged and becomes the hard-example set for the next
+training round. Endpoints: `GET /queue`, `POST /feedback`.
+
+## Drift monitoring
+
+`python scripts/drift_report.py` computes label/PII/latency/override-rate
+statistics over the decision log (by-day breakdown) and raises alerts when
+thresholds are crossed — exit 1 in CI. Reports land in
+`data/processed/results/drift_report.json`.
+
+## Data licences
+
+See `docs/licence_audit.md` before any deployment or commercial
+conversation. Short version: HateCheck is CC BY 4.0 (eval-only); HateXplain
+models are research artefacts; HASOC/Hinglish terms pending.
+
 ## Repository layout
 
 ```
