@@ -44,6 +44,37 @@ Screenshots for slides: `demo screenshots coming — capture from the UI`.
 Roadmap: LoRA-LLM natural-language rationales and GRPO reward-optimised
 versions will slot into the same interface.
 
+## Serving as a REST API (productisation)
+
+```bash
+make serve        # FastAPI on http://127.0.0.1:8000 (docs at /docs)
+```
+
+- `GET /health` — model status + headline metrics (monitor-safe, no PII).
+- `POST /predict` — `{text, threshold, scrub_pii}` → label, probability,
+  n-gram rationale with contributions, live comprehensiveness/sufficiency,
+  latency. Threshold is per-request (0–1) so sensitivity is tunable per
+  customer/workflow.
+- **Auditable decision log** (`logs/decisions.jsonl`): every prediction is
+  stored with a `decision_id`, the threshold used and the full explanation —
+  with the input text **PII-scrubbed at write time** (emails/URLs/mentions/
+  phones → `[EMAIL]`/`[URL]`/`[USER]`/`[PHONE]`); raw user text is never
+  persisted.
+- `Dockerfile` included: `docker build -t pj03-api . && docker run -p 8000:8000 pj03-api`.
+
+## Release gate (quality + fairness regression check)
+
+```bash
+make gate         # exit 0 = shippable, exit 1 = regressions, report JSON written
+```
+
+Retrains the current model fresh (~25s CPU), then enforces the floors in
+`configs/release.yaml`: macro-F1 ≥ 0.78, AUC ≥ 0.85, and worst-group
+fairness floors (subgroup AUC / BPSN / BNSP ≥ 0.60–0.65). Verified both
+ways: passes on the current model, fails with clear per-gate reasons when
+floors are impossible. Every future model (SFT, GRPO) must clear this gate
+before shipping.
+
 ## Repository layout
 
 ```

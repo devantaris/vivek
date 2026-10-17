@@ -19,6 +19,9 @@ One entry per meaningful experiment/run. Keep it honest: negative results too.
 | 2026-10-14 | p3 | GRPO implemented (trl.GRPOTrainer + composite reward via TRL contract); contract validated on CPU with simulated trainer calls | `fa5e87b`, `2553957` | reward ranking correct: faithful>boilerplate>wrong-label | GPU-only; runbook written |
 | 2026-10-16 | demo | **Demo product**: char_wb n-grams added → macro-F1 **0.8115** (word-only 0.799); joblib artifact + Gradio app (rationale highlights, live faithfulness, bias audit tab) | `9932c4a`, `8d53f45` | "kill all jews" 0.93 P, comp 0.93 | demo trains in ~30s CPU; `make demo` |
 | 2026-10-16 | demo | 'i hate women' scores 0.37 = labelled *offensive* (not hatespeech) by HateXplain majority → maps to 0 | — | — | kept as the annotation-subjectivity talking point in the demo |
+| 2026-10-17 | product | PII scrubber (email/url/mention/phone → placeholders); decision logs always scrubbed | `61ab65b` | 8 tests | raw user text never persisted |
+| 2026-10-17 | product | FastAPI service: /predict (per-request threshold), /health, JSONL decision log, Dockerfile | `7a0246d` | 6 tests incl. PII-never-stored | `make serve`; docs at /docs |
+| 2026-10-17 | product | Release gate (quality+fairness floors, `make gate`): PASS on current model (F1 0.810, worst subgroup 0.717, BPSN 0.696, BNSP 0.743); FAIL verified with impossible floors | `68eb5a1` | exit codes 0/1 verified both ways | CI hook for all future models |
 
 ## Open decisions
 
