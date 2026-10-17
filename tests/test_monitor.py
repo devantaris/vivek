@@ -41,7 +41,7 @@ def test_basic_stats(tmp_path) -> None:
     assert report.n_decisions == 20
     assert report.hateful_rate == 0.2
     assert report.pii_rate == 0.25
-    assert report.mean_prob == pytest.approx(0.4)
+    assert report.mean_prob == pytest.approx(0.42)  # (4*0.9 + 16*0.3)/20
     assert report.latency_p50_ms == 50.0
     assert report.latency_p95_ms == 50.0
     assert report.by_date["2026-10-17"]["n"] == 20
