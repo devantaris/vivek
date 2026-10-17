@@ -1,7 +1,7 @@
 PYTHON ?= python
 PIP ?= $(PYTHON) -m pip
 
-.PHONY: setup test lint format data baseline sft reward eval demo artifact help
+.PHONY: setup test lint format data baseline sft reward eval demo artifact serve gate help
 
 help:
 	@echo "PJ-03 targets:"
@@ -16,6 +16,8 @@ help:
 	@echo "  eval      - Phase 4 evaluation"
 	@echo "  artifact  - train + persist the demo model (CPU, ~30s)"
 	@echo "  demo      - launch the Gradio demo app"
+	@echo "  serve     - launch the REST API (FastAPI, port 8000)"
+	@echo "  gate      - release gate: quality + fairness regression check"
 
 setup:
 	$(PYTHON) -m venv .venv
@@ -54,3 +56,9 @@ artifact:
 
 demo:
 	$(PYTHON) scripts/demo_app.py
+
+serve:
+	$(PYTHON) scripts/serve_api.py
+
+gate:
+	$(PYTHON) scripts/release_gate.py

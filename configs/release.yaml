@@ -1,0 +1,15 @@
+# Release gate thresholds: a model build must clear ALL of these or
+# scripts/release_gate.py exits nonzero (CI/CD hook).
+# Set deliberately below current numbers so they catch regressions, not
+# normal variation. Tighten as the models improve.
+
+quality:
+  macro_f1_min: 0.78
+  auc_min: 0.85
+
+fairness:
+  subgroup_auc_min: 0.65
+  bpsn_auc_min: 0.60
+  bnsp_auc_min: 0.65
+
+report_path: data/processed/results/release_gate.json
