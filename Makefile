@@ -1,7 +1,7 @@
 PYTHON ?= python
 PIP ?= $(PYTHON) -m pip
 
-.PHONY: setup test lint format data baseline sft reward eval demo artifact serve gate help
+.PHONY: setup test lint format data baseline sft reward eval demo artifact serve review gate help
 
 help:
 	@echo "PJ-03 targets:"
@@ -59,6 +59,9 @@ demo:
 
 serve:
 	$(PYTHON) scripts/serve_api.py
+
+review:
+	$(PYTHON) scripts/review_app.py
 
 gate:
 	$(PYTHON) scripts/release_gate.py

@@ -20,6 +20,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from pj03.preprocess.pii import has_pii, scrub
+from pj03.service.feedback import FeedbackRecord, FeedbackStore
 from pj03.utils.logging import get_logger
 
 logger = get_logger("pj03.service")
@@ -61,12 +62,17 @@ class PredictResponse(BaseModel):
     disclaimer: str
 
 
-def create_app(predictor, decision_log: str | Path = "logs/decisions.jsonl"):
+def create_app(
+    predictor,
+    decision_log: str | Path = "logs/decisions.jsonl",
+    feedback_log: str | Path = "logs/feedback.jsonl",
+):
     """Build the FastAPI app around a :class:`~pj03.demo.predictor.DemoPredictor`."""
-    from fastapi import FastAPI
+    from fastapi import FastAPI, HTTPException
 
     log_path = Path(decision_log)
     log_path.parent.mkdir(parents=True, exist_ok=True)
+    feedback_store = FeedbackStore(feedback_log)
 
     def append_log(entry: dict) -> None:
         with log_path.open("a", encoding="utf-8") as fh:
@@ -136,5 +142,32 @@ def create_app(predictor, decision_log: str | Path = "logs/decisions.jsonl"):
             }
         )
         return response
+
+    @app.get("/queue")
+    def queue(limit: int = 50) -> dict:
+        """Unreviewed decisions for the moderation UI (newest first)."""
+        return {"pending": feedback_store.pending_queue(log_path, limit=limit)}
+
+    @app.post("/feedback", response_model=FeedbackRecord)
+    def feedback(record: FeedbackRecord) -> FeedbackRecord:
+        """Record a moderator confirmation or override for a decision."""
+        if record.decision_id not in {e.get("decision_id") for e in _read_log()}:
+            raise HTTPException(
+                status_code=404, detail=f"unknown decision_id {record.decision_id!r}"
+            )
+        if record.final_label not in (0, 1) or record.model_label not in (0, 1):
+            raise HTTPException(status_code=422, detail="labels must be 0 or 1")
+        return feedback_store.append(record)
+
+    def _read_log() -> list[dict]:
+        if not log_path.is_file():
+            return []
+        out = []
+        with log_path.open(encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    out.append(json.loads(line))
+        return out
 
     return app
