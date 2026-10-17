@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from pj03.service.monitor import DriftReport, MonitorConfig, analyse
 
 
@@ -30,12 +32,16 @@ def make_entries(n: int, prob: float = 0.9, label: int = 1, latency: float = 50.
 
 def test_basic_stats(tmp_path) -> None:
     log = tmp_path / "decisions.jsonl"
-    write_log(log, make_entries(20))
+    entries = make_entries(20)
+    for i, e in enumerate(entries):
+        e["label"] = 1 if i % 5 == 0 else 0  # 20% hateful: inside default bounds
+        e["prob_hateful"] = 0.3 if e["label"] == 0 else 0.9
+    write_log(log, entries)
     report = analyse(log, MonitorConfig())
     assert report.n_decisions == 20
-    assert report.hateful_rate == 1.0
+    assert report.hateful_rate == 0.2
     assert report.pii_rate == 0.25
-    assert report.mean_prob == 0.9
+    assert report.mean_prob == pytest.approx(0.4)
     assert report.latency_p50_ms == 50.0
     assert report.latency_p95_ms == 50.0
     assert report.by_date["2026-10-17"]["n"] == 20
