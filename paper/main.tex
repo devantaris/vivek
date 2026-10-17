@@ -1,6 +1,6 @@
 % =====================================================================
 % PJ-03: Hate Speech Detection through Explainable AI and
-%        Reward-Optimized LLMs — ACL-style skeleton
+%        Reward-Optimized LLMs — ACL-style paper draft
 %
 % TODO (before first compile):
 %   Download the official ACL style files from the ACL style repository:
@@ -29,45 +29,218 @@
 \maketitle
 
 \begin{abstract}
-TODO: One paragraph. Motivation (hate speech in English and Hinglish social
-media), the approach (rationale-generating classifier, LoRA SFT +
-reward-optimised post-training with a composite reward), the XAI/bias audit
-methodology, and the headline result placeholder.
+Hate speech detection systems are increasingly deployed to assist human
+moderators, yet two gaps limit their practical value: most models give no
+faithful account of \emph{why} a post was flagged, and multilingual
+code-mixed content---notably Hinglish (Hindi--English)---remains
+under-served. We present a four-phase study on English and Hinglish social
+media text. First, we establish baselines from TF--IDF classifiers to
+multilingual encoders (mBERT, XLM-R, MuRIL) on HateXplain. Second, we
+LoRA-fine-tune a small instruction-tuned LLM to emit a structured
+\emph{label + rationale} pair whose format is machine-checkable. Third, we
+optimise this model with Group Relative Policy Optimization (GRPO) under a
+composite reward $R = \alpha R_{\text{label}} + \beta R_{\text{faith}} -
+\gamma R_{\text{bias}}$, where $R_{\text{faith}}$ is a masking-based
+faithfulness score that penalises decorative rationales and
+$R_{\text{bias}}$ penalises rationales that merely cite identity terms.
+Finally, we audit all models with comprehensiveness/sufficiency faithfulness
+metrics, subgroup AUC and BPSN/BNSP unintended-bias metrics, and HateCheck
+functional tests. Our baseline already shows measurable identity-term bias
+(e.g., BPSN of 0.65 for anti-Jewish content), motivating the bias-aware
+reward. % TODO: add headline result once Phase 2-3 runs complete.
 \end{abstract}
 
 \section{Introduction}
-TODO: Problem, why Hinglish code-mixing is hard, why rationales matter for
-moderation workflows, contributions list.
+Online hate speech causes real harm, and human moderation does not scale.
+Automated classifiers help, but a bare probability score gives moderators
+little to act on and gives researchers little to audit. If a system says a
+post is hateful \emph{because of specific words}, both the moderator and the
+auditor can check that claim. Meanwhile, moderation demand in India and
+similar multilingual markets involves \emph{code-mixed} text---Roman-script
+Hindi--English (Hinglish)---where most English-only systems degrade.
+
+This project makes three contributions:
+\begin{enumerate}
+  \item A \textbf{structured rationale format} for instruction-tuned LLMs
+  (\texttt{Label:}/\texttt{Rationale:}) whose parseability, label accuracy
+  and rationale faithfulness can each be measured and rewarded
+  (\S\ref{sec:method}).
+  \item A \textbf{composite reward} for GRPO post-training that combines
+  label accuracy with a masking-based \emph{faithfulness} term and an
+  identity-term \emph{bias penalty}, with tunable weights
+  $\alpha,\beta,\gamma$ (\S\ref{sec:reward}).
+  \item A \textbf{bias-aware evaluation protocol}: comprehensiveness and
+  sufficiency for rationales; subgroup AUC, BPSN and BNSP
+  \citep{borkan2019nuanced} per identity group; HateCheck functional tests
+  \citep{vidgen2021hatecheck}; and out-of-distribution transfer
+  (\S\ref{sec:eval}).
+\end{enumerate}
+
+% TODO: expand with Hinglish motivation numbers once HASOC data lands.
 
 \section{Related Work}
-TODO: Hate speech detection (English, Hindi/Hinglish); rationale-based and
-explainable classification; reward optimisation (RLHF/GRPO/DPO); faithfulness
-metrics; bias audit metrics.
+\paragraph{Hate speech datasets.} HateXplain \citep{mathew2020hatexplain}
+provides English Twitter/Gab posts with three-annotator labels, rationale
+spans and target communities---the rationale spans are what make
+explainability trainable. HASOC \citep{mandl2020hasoc} covers Hindi,
+English and code-mixed tracks. HateCheck \citep{vidgen2021hatecheck}
+provides 3{,}728 functional test cases across 29 functionalities, including
+identity-term usage in non-hateful contexts---exactly the failure mode our
+bias penalty targets.
+
+\paragraph{Rationales and faithfulness.} ERASER \citep{deyoung2020eraser}
+established comprehensiveness and sufficiency as the standard faithfulness
+measures: removing (keeping) the top-attributed tokens should (almost)
+reproduce the prediction. We reuse these both as evaluation metrics and,
+novelly, as a \emph{training signal} inside the reward.
+
+\paragraph{Unintended bias.} \citet{borkan2019nuanced} introduced subgroup
+AUC, BPSN and BNSP to measure identity-term false positives and missed
+in-group hate; we adopt their definitions and report them per target group.
+
+\paragraph{Reward-optimised post-training.} DPO \citep{rafailov2023dpo}
+optimises preferences directly; GRPO \citep{shao2024deepseekmath} samples a
+group of completions per prompt and normalises rewards within the group,
+avoiding a separate value model. We use GRPO with a composite,
+interpretable reward rather than a learned reward model, so every reward
+component can be audited.
+
+\paragraph{Multilingual encoders.} mBERT \citep{devlin2019bert}, XLM-R
+\citep{conneau2020xlmr} and MuRIL \citep{khanuja2021muril} are the standard
+multilingual baselines; MuRIL is trained on Indian-language corpora and is
+our best candidate for Hinglish. Code-mixing corpora and classifiers
+\citep{bohra2018dataset} motivate the Hinglish track.
 
 \section{Method}
-TODO: Unified schema, Phase-1 baselines, Phase-2 LoRA SFT with fixed
-Label/Rationale output format, Phase-3 composite reward
-$R = \alpha R_{\text{label}} + \beta R_{\text{faith}} - \gamma R_{\text{bias}}$,
-Phase-4 XAI and audit setup.
+\label{sec:method}
+\subsection{Unified data schema}
+All datasets are normalised to one schema (id, text, binary label,
+language, source, rationale mask, target group, split). For HateXplain we
+majority-vote the three annotators, resolving ties toward the more harmful
+class; hatespeech maps to 1 and offensive/normal to 0---a documented,
+deliberate simplification. Rationale masks keep token positions flagged by
+at least two annotators; target groups keep communities named by at least
+half.
+
+\subsection{Phase 1: baselines}
+A TF--IDF + logistic regression classifier (word 1--2-grams; a char
+2--5-gram variant for obfuscation) establishes the floor, followed by
+fine-tuned mBERT, XLM-R and MuRIL encoders.
+
+\subsection{Phase 2: rationale-generating SFT}
+A 1--3B instruction-tuned LLM is LoRA-adapted \citep{hu2022lora} on
+HateXplain to output the fixed format
+\texttt{Label: <0|1>} + \texttt{Rationale: <short sentence>}. Where
+annotator rationales exist (8{,}862 of 15{,}383 training posts) the gold
+completion quotes the flagged words; otherwise a template completion is
+used. The format is enforced by a parser used identically in training-time
+evaluation and in the reward.
+
+\subsection{Phase 3: composite reward}
+\label{sec:reward}
+Post-training with GRPO maximises
+\begin{equation}
+R = \alpha\,R_{\text{label}} + \beta\,R_{\text{faith}} - \gamma\,R_{\text{bias}},
+\end{equation}
+with $\alpha{=}1.0,\ \beta{=}0.5,\ \gamma{=}0.3$ by default (ablated).
+$R_{\text{label}} \in \{0,1\}$ scores the parsed label.
+$R_{\text{faith}} \in [0,1]$ removes the rationale's content words from the
+post and measures $|\Delta P(\text{hateful})|$: rationales whose removal
+does not move the model's own prediction are decorative and score near
+zero. $R_{\text{bias}} \in [0,1]$ is the fraction of rationale tokens that
+are protected-identity terms (lexicon-based; penalised via $-\gamma$), so
+the model must cite \emph{toxic content} rather than the mere presence of a
+group.
+
+\subsection{Phase 4: evaluation protocol}
+\label{sec:eval}
+Macro-F1 overall and per language; comprehensiveness/sufficiency for
+rationales; subgroup AUC, BPSN, BNSP per target group; HateCheck
+per-functionality failure rates; and cross-dataset OOD transfer
+(HateXplain$\leftrightarrow$HASOC).
 
 \section{Experiments}
-TODO: Datasets and splits, models, training details, evaluation protocol.
+\paragraph{Data.} HateXplain: 15{,}383/1{,}922/1{,}924 train/dev/test,
+$\sim$31\% hateful. HateCheck: 3{,}728 test-only cases (never trained on).
+% TODO: HASOC and Hinglish dataset rows once obtained.
+\paragraph{Models.} TF--IDF+LogReg (word; word+char); mBERT; XLM-R-base;
+MuRIL; LoRA SFT LLM (base model TODO); +GRPO.
+\paragraph{Setup.} Seeds fixed (42); deterministic algorithms where
+supported; encoder fine-tuning: lr $2\times10^{-5}$, batch 16, 3 epochs,
+max length 256. GRPO: 8 generations/prompt, KL coef 0.04, lr
+$2\times10^{-6}$. All code, configs and per-run metrics are in the public
+repository.\footnote{\texttt{github.com/devantaris/vivek} (research code;
+MIT).}
 
 \section{Results}
-TODO: Main table (macro-F1 per model per language), reward-ablation table.
+\label{sec:results}
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Model & Macro-F1 & AUC \\
+\midrule
+TF--IDF (word) + LogReg & 0.799 & 0.891 \\
+TF--IDF (word+char) + LogReg & \textbf{0.812} & \textbf{0.899} \\
+mBERT & TODO & TODO \\
+XLM-R & TODO & TODO \\
+MuRIL & TODO & TODO \\
+LoRA SFT LLM & TODO & TODO \\
+\quad + GRPO (ours) & TODO & TODO \\
+\bottomrule
+\end{tabular}
+\caption{HateXplain test results. Encoder/LLM rows pending GPU runs.}
+\label{tab:main}
+\end{table}
+
+The char n-gram variant gains $+0.013$ macro-F1 over word-only TF--IDF,
+confirming that character-level signals (obfuscated spellings) matter even
+before neural models.
 
 \section{Analysis}
-TODO: Faithfulness results (comprehensiveness/sufficiency), bias audit
-(subgroup AUC, BPSN/BNSP), HateCheck per-functionality failures, OOD results.
+\label{sec:analysis}
+\paragraph{Unintended bias exists already at the baseline.} On the TF--IDF
+model, BPSN is lowest for \emph{jewish} (0.65) and \emph{african} (0.70)
+targets: benign posts merely \emph{mentioning} these groups score nearly as
+hateful as genuinely hateful background posts---the identity-term shortcut.
+Conversely BNSP is lowest for \emph{refugee} (0.72) and \emph{women}
+(0.80): hateful posts targeting them are under-scored. Subgroup AUC ranges
+0.71--0.83 (\emph{arab} weakest). This is precisely the failure family that
+$-\gamma R_{\text{bias}}$ is designed to penalise.
+% TODO: post-GRPO bias deltas, faithfulness-vs-SFT comparison, HateCheck
+% per-functionality table, OOD table.
+
+\paragraph{Faithfulness as a live property.} In our deployment prototype,
+every prediction ships with comprehensiveness/sufficiency computed on that
+exact input; on clear-cut cases (e.g., violent imperatives) removing the
+top-3 attributed tokens flips the prediction almost entirely
+(comprehensiveness $\approx 0.93$), while template-like rationales score
+near zero---the same signal GRPO optimises.
 
 \section{Ethics}
-TODO: Offensive content warning, research-use-only statement, human-in-the-
-loop moderation stance, annotation subjectivity, bias risks. See
-\texttt{docs/ethics.md} in the repository.
+This research uses datasets containing offensive and hateful content;
+exposure is a documented harm and we limit raw-example reproduction in
+papers and slides. The system is a decision-\emph{support} tool for human
+moderators, not a replacement: annotation of hate speech is subjective
+(HateXplain labels are majority votes over three annotators, and our
+tie-breaking deliberately resolves toward the harmful class), and automated
+decisions can silence legitimate speech, including that of the targeted
+communities themselves. We audit identity-term bias explicitly rather than
+reporting a single aggregate score. Dataset licences constrain use: our
+current models are research artefacts (see the repository's licence
+audit); a deployment would require licensed or customer data.
 
 \section{Limitations}
-TODO: Binary labelling simplification, dataset licence/access constraints,
-small-LM scale, subjective rationales, language coverage.
+Binary labels flatten a three-way distinction (hateful/offensive/normal);
+``offensive'' posts mapping to 0 will look like false negatives to users
+who disagree with that choice. Current results are English-only pending
+HASOC and Hinglish data. The bias lexicon in $R_{\text{bias}}$ is small and
+English-centric, and lexicon-based bias penalties can be gamed; a learned
+or multilingual lexicon is future work. The reward model is
+interpretable but hand-designed; $\alpha,\beta,\gamma$ were set by intuition
+pending ablation. Our LLM experiments use 1--3B models under compute
+budget constraints; scaling behaviour is untested.
 
 \section*{References}
 \bibliography{references}
