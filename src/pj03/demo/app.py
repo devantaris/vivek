@@ -36,14 +36,25 @@ def _highlighted(result) -> list[tuple[str, str | None]]:
     """Convert a prediction to Gradio HighlightedText segments."""
     if not result.rationale:
         return [(result.text, None)]
-    weights = {ngram: w for ngram, w in result.rationale}
+    import re
+
+    from pj03.preprocess.hinglish import _VARIANT_MAP
+
+    weights = {ngram.lower(): w for ngram, w in result.rationale}
     tokens = result.text.split()
     spans: list[tuple[str, str | None]] = []
     for tok in tokens:
-        low = tok.lower()
+        clean_tok = "".join(c for c in tok.lower() if c.isalnum())
+        norm_tok = _VARIANT_MAP.get(clean_tok, clean_tok)
         score = 0.0
         for ngram, w in weights.items():
-            if low and low in ngram and ngram.strip().isalnum():
+            ngram_words = set(re.findall(r"\b\w+\b", ngram))
+            if (
+                clean_tok in ngram_words
+                or norm_tok in ngram_words
+                or clean_tok == ngram
+                or norm_tok == ngram
+            ):
                 score = w if abs(w) > abs(score) else score
         if score > 0.05:
             spans.append((tok + " ", "pushes hateful"))

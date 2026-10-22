@@ -131,12 +131,12 @@ class DemoPredictor:
         tokens = text.split()
         rationale: list[tuple[str, float]] = []
 
-        if hinglish_slurs and (label == 0 or label is None):
+        if hinglish_slurs:
             label = 1
-            prob_hateful = max(prob_hateful, 0.86)
-            rationale_text = f"the key abusive Hinglish words are: {', '.join(hinglish_slurs)}"
+            prob_hateful = max(prob_hateful, 0.92)
+            rationale_text = f"the key abusive/threatening Hinglish terms are: {', '.join(hinglish_slurs)}"
             for slur in hinglish_slurs:
-                rationale.append((slur, 0.88))
+                rationale.insert(0, (slur, 0.95))
         elif rationale_text:
             key_words = set(rationale_text.lower().replace(":", " ").replace(",", " ").split())
             for tok in tokens:
@@ -153,9 +153,12 @@ class DemoPredictor:
             contributions = self._token_contributions(text)
             rationale = sorted(contributions, key=lambda x: -abs(x[1]))[:5]
 
+        # Enforce consistency: label strictly reflects prob_hateful >= 0.5
+        final_label = 1 if prob_hateful >= 0.5 else 0
+
         return PredictionResult(
             text=text,
-            label=label if label in (0, 1) else int(prob_hateful >= 0.5),
+            label=final_label,
             prob_hateful=prob_hateful,
             rationale=rationale,
             model_name="Qwen2.5-1.5B LoRA SFT",
@@ -175,14 +178,13 @@ class DemoPredictor:
 
         prob = float(self.pipeline.predict_proba([text])[0, 1])
         if hinglish_slurs:
-            prob = max(prob, 0.88)
+            prob = max(prob, 0.92)
 
         label = int(prob >= 0.5)
         contributions = self._token_contributions(text)
 
         for slur in hinglish_slurs:
-            if not any(slur in item[0].lower() for item in contributions):
-                contributions.append((slur, 0.90))
+            contributions.insert(0, (slur, 0.95))
 
         rationale = sorted(contributions, key=lambda x: -abs(x[1]))[:top_k]
 
