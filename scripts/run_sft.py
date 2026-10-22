@@ -87,6 +87,7 @@ def main() -> None:
         target_modules=target_modules,
         learning_rate=sft_cfg["learning_rate"],
         batch_size=batch_size,
+        gradient_accumulation_steps=sft_cfg.get("gradient_accumulation", 2),
         epochs=epochs,
         max_length=max_length,
         seed=config.get("seed", 42),

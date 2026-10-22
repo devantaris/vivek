@@ -90,6 +90,7 @@ def run_lora_sft(
     target_modules: list[str] | None = None,
     learning_rate: float = 2e-4,
     batch_size: int = 8,
+    gradient_accumulation_steps: int = 2,
     epochs: int = 3,
     max_length: int = 512,
     seed: int = 42,
@@ -108,6 +109,7 @@ def run_lora_sft(
             (pass ``["c_attn"]`` for GPT-2-family models).
         learning_rate: AdamW learning rate.
         batch_size: Per-device batch size.
+        gradient_accumulation_steps: Gradient accumulation steps.
         epochs: Training epochs.
         max_length: Max tokenised length of prompt+completion.
         seed: Random seed.
@@ -129,7 +131,11 @@ def run_lora_sft(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = AutoModelForCausalLM.from_pretrained(model_name)
+    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        dtype=torch_dtype,
+    )
     lora_config = LoraConfig(
         r=lora_r,
         lora_alpha=lora_alpha,
@@ -151,11 +157,14 @@ def run_lora_sft(
         output_dir=output_dir,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
+        gradient_accumulation_steps=gradient_accumulation_steps,
         num_train_epochs=epochs,
         learning_rate=learning_rate,
+        fp16=torch.cuda.is_available(),
         use_cpu=not torch.cuda.is_available(),
         eval_strategy="epoch" if eval_wrapped is not None else "no",
-        save_strategy="no",
+        save_strategy="epoch",
+        save_total_limit=2,
         logging_steps=10,
         report_to="none",
         seed=seed,

@@ -7,9 +7,9 @@ sft:
   model_name: Qwen/Qwen2.5-1.5B-Instruct
   max_length: 512
   learning_rate: 2.0e-04
-  batch_size: 8
-  gradient_accumulation: 2
-  epochs: 3
+  batch_size: 4
+  gradient_accumulation: 4
+  epochs: 2
 
   lora:
     r: 16
