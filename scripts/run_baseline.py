@@ -102,7 +102,9 @@ def run_encoder(config: dict) -> dict[str, float]:
         n_train, n_eval = smoke.get("n_train", 200), smoke.get("n_eval", 100)
         logger.info(
             "SMOKE mode: %s on %d train / %d eval examples (CPU path validation)",
-            models[0], n_train, n_eval,
+            models[0],
+            n_train,
+            n_eval,
         )
         # Stratified-ish trim: first half positives, half negatives.
         pos_t = [i for i, y in enumerate(train_labels) if y == 1][: n_train // 2]

@@ -33,9 +33,7 @@ def integrated_gradients_attribution(
     Raises:
         NotImplementedError: Until Phase 4.
     """
-    raise NotImplementedError(
-        "TODO(Phase 4): implement Captum IntegratedGradients on embeddings."
-    )
+    raise NotImplementedError("TODO(Phase 4): implement Captum IntegratedGradients on embeddings.")
 
 
 def shap_attribution(model_predict: Any, texts: list[str]) -> list[list[float]]:

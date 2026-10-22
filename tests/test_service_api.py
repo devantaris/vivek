@@ -16,8 +16,14 @@ def client(tmp_path_factory):
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
-    texts = ["kill all jews", "jews must go", "hate these jews",
-             "good morning friends", "lovely day today", "so happy for you"] * 4
+    texts = [
+        "kill all jews",
+        "jews must go",
+        "hate these jews",
+        "good morning friends",
+        "lovely day today",
+        "so happy for you",
+    ] * 4
     labels = [1, 1, 1, 0, 0, 0] * 4
     pipe = build_pipeline(char_features=True, max_features=500)
     pipe.fit(texts, labels)
@@ -81,9 +87,5 @@ def test_decision_log_never_stores_raw_pii(client) -> None:
 
 def test_validation_errors(client) -> None:
     assert client.post("/predict", json={"text": ""}).status_code == 422
-    assert client.post(
-        "/predict", json={"text": "hi", "threshold": 1.5}
-    ).status_code == 422
-    assert client.post(
-        "/predict", json={"text": "x" * 30_000}
-    ).status_code == 422
+    assert client.post("/predict", json={"text": "hi", "threshold": 1.5}).status_code == 422
+    assert client.post("/predict", json={"text": "x" * 30_000}).status_code == 422

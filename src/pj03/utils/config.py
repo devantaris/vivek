@@ -47,9 +47,7 @@ def load_config(
 def apply_override(config: dict[str, Any], override: str) -> None:
     """Apply a single ``dot.key=value`` override to ``config`` in place."""
     if "=" not in override:
-        raise ValueError(
-            f"Invalid override {override!r}: expected 'dot.key=value' format"
-        )
+        raise ValueError(f"Invalid override {override!r}: expected 'dot.key=value' format")
     key, _, raw_value = override.partition("=")
     key = key.strip()
     if not key:

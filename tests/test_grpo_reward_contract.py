@@ -57,9 +57,7 @@ class TestTRLContract:
         fn = make_reward_fn()
         # TRL forwards whatever the dataset has; a dataset without post_text
         # (e.g. during a dry run) must still yield finite rewards.
-        rewards = _call_like_trl(
-            fn, prompts=["p"], completions=[FAITHFUL], columns={}
-        )
+        rewards = _call_like_trl(fn, prompts=["p"], completions=[FAITHFUL], columns={})
         assert len(rewards) == 1
         assert rewards[0] == rewards[0]  # finite (not NaN)
 

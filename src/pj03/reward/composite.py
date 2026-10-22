@@ -94,7 +94,5 @@ def batch_rewards(
             predict_probs,
             post_texts[i] if post_texts is not None else None,
         )
-        for i, (gen, gold) in enumerate(
-            zip(generations, gold_labels, strict=False)
-        )
+        for i, (gen, gold) in enumerate(zip(generations, gold_labels, strict=False))
     ]

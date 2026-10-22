@@ -49,15 +49,11 @@ def evaluate_current_model() -> tuple[dict[str, float], dict[str, dict[str, floa
     pipe.fit([e.text for e in train], [e.label for e in train])
     preds = pipe.predict([e.text for e in test])
     scores = pipe.predict_proba([e.text for e in test])[:, 1]
-    metrics = classification_metrics(
-        [e.label for e in test], preds.tolist(), scores.tolist()
-    )
+    metrics = classification_metrics([e.label for e in test], preds.tolist(), scores.tolist())
 
     terms = config.get("bias_audit", {}).get("terms", [])
     masks = {
-        term: [
-            ex.target_group is not None and term in ex.target_group for ex in test
-        ]
+        term: [ex.target_group is not None and term in ex.target_group for ex in test]
         for term in terms
     }
     audit = bias_audit([e.label for e in test], scores.tolist(), masks)
@@ -122,7 +118,10 @@ def main() -> int:
     for name, entry in report["gates"].items():
         logger.info(
             "GATE %-28s %-8s (value=%s floor=%s)",
-            name, "PASS" if entry["pass"] else "FAIL", entry["value"], entry["floor"],
+            name,
+            "PASS" if entry["pass"] else "FAIL",
+            entry["value"],
+            entry["floor"],
         )
     if failures:
         logger.error("RELEASE GATE FAILED: %s", "; ".join(failures))

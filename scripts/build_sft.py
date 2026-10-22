@@ -32,12 +32,13 @@ def main() -> None:
         with path.open("w", encoding="utf-8") as fh:
             for rec in records:
                 fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-        n_rationale = sum(
-            1 for ex in examples if ex.rationale_mask
-        )
+        n_rationale = sum(1 for ex in examples if ex.rationale_mask)
         logger.info(
             "%s: %d records (%d with annotator rationales) -> %s",
-            split.value, len(records), n_rationale, path,
+            split.value,
+            len(records),
+            n_rationale,
+            path,
         )
 
 

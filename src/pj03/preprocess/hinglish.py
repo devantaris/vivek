@@ -49,7 +49,22 @@ def is_code_mixed(text: str) -> bool:
         return False
     tokens = set(text.lower().split())
     hinglish_markers = {
-        "hai", "hain", "nahi", "kyu", "kya", "aur", "tum", "tuh", "mera",
-        "tera", "usko", "isko", "yeh", "woh", "bhai", "kaiko", "matlab",
+        "hai",
+        "hain",
+        "nahi",
+        "kyu",
+        "kya",
+        "aur",
+        "tum",
+        "tuh",
+        "mera",
+        "tera",
+        "usko",
+        "isko",
+        "yeh",
+        "woh",
+        "bhai",
+        "kaiko",
+        "matlab",
     }
     return bool(tokens & hinglish_markers)

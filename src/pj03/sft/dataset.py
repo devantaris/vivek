@@ -58,7 +58,5 @@ def build_sft_records(examples: list[Example]) -> list[dict[str, str]]:
         parsed_label, _ = parse_output(completion)
         if parsed_label != ex.label:
             raise ValueError(f"completion for {ex.id} does not parse back to label {ex.label}")
-        records.append(
-            {"id": ex.id, "prompt": format_prompt(ex.text), "completion": completion}
-        )
+        records.append({"id": ex.id, "prompt": format_prompt(ex.text), "completion": completion})
     return records

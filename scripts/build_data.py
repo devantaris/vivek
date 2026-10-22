@@ -29,8 +29,13 @@ def build_hatexplain(mode: str = "strict_hate") -> None:
     stats = loaders_hatexplain.build_processed(str(raw), str(out), mode=mode)
     logger.info(
         "HateXplain [%s]: train=%d val=%d test=%d positive=%d negative=%d -> %s",
-        mode, stats.n_train, stats.n_validation, stats.n_test,
-        stats.n_positive, stats.n_negative, out,
+        mode,
+        stats.n_train,
+        stats.n_validation,
+        stats.n_test,
+        stats.n_positive,
+        stats.n_negative,
+        out,
     )
 
 
@@ -44,7 +49,10 @@ def build_hatecheck(mode: str = "strict_hate") -> None:
     stats = loaders_hatecheck.build_processed(str(raw), str(out))
     logger.info(
         "HateCheck: test=%d positive=%d negative=%d -> %s (eval-only, never train)",
-        stats.n_test, stats.n_positive, stats.n_negative, out,
+        stats.n_test,
+        stats.n_positive,
+        stats.n_negative,
+        out,
     )
 
 

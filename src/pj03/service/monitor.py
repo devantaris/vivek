@@ -101,9 +101,7 @@ def analyse(decisions_path: str | Path, config: MonitorConfig | None = None) -> 
     feedback_path = path.with_name("feedback.jsonl")
     if feedback_path.is_file():
         records = [
-            json.loads(line)
-            for line in feedback_path.open(encoding="utf-8")
-            if line.strip()
+            json.loads(line) for line in feedback_path.open(encoding="utf-8") if line.strip()
         ]
         if records:
             overrides = sum(1 for r in records if not r["agrees"])

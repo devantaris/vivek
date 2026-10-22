@@ -35,15 +35,10 @@ MAX_RATIONALE_TOKENS = 20
 
 def _rationale_content_tokens(rationale: str) -> list[str]:
     """Lowercased, punctuation-stripped rationale tokens minus stopwords."""
-    tokens = [
-        tok.strip(".,!?;:\"'()[]").lower()
-        for tok in rationale.split()
+    tokens = [tok.strip(".,!?;:\"'()[]").lower() for tok in rationale.split()]
+    return [tok for tok in tokens if tok and tok not in _STOPWORDS and not tok.startswith("key")][
+        :MAX_RATIONALE_TOKENS
     ]
-    return [
-        tok
-        for tok in tokens
-        if tok and tok not in _STOPWORDS and not tok.startswith("key")
-    ][:MAX_RATIONALE_TOKENS]
 
 
 def r_faith(

@@ -17,8 +17,14 @@ def env(tmp_path_factory):
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
-    texts = ["kill all jews", "jews must go", "hate these jews",
-             "good morning friends", "lovely day today", "so happy for you"] * 4
+    texts = [
+        "kill all jews",
+        "jews must go",
+        "hate these jews",
+        "good morning friends",
+        "lovely day today",
+        "so happy for you",
+    ] * 4
     labels = [1, 1, 1, 0, 0, 0] * 4
     pipe = build_pipeline(char_features=True, max_features=500)
     pipe.fit(texts, labels)
@@ -49,14 +55,25 @@ def test_full_review_cycle(env) -> None:
     model1 = client.get("/queue").json()["pending"][0]["label"]
     r1 = client.post(
         "/feedback",
-        json={"decision_id": d1, "model_label": model1, "final_label": model1,
-              "agrees": True, "moderator": "devansh"},
+        json={
+            "decision_id": d1,
+            "model_label": model1,
+            "final_label": model1,
+            "agrees": True,
+            "moderator": "devansh",
+        },
     )
     assert r1.status_code == 200
     r2 = client.post(
         "/feedback",
-        json={"decision_id": d2, "model_label": 0, "final_label": 1,
-              "agrees": False, "moderator": "devansh", "note": "missed slur"},
+        json={
+            "decision_id": d2,
+            "model_label": 0,
+            "final_label": 1,
+            "agrees": False,
+            "moderator": "devansh",
+            "note": "missed slur",
+        },
     )
     assert r2.status_code == 200
     # 4. Queue is now empty; override rate 1/2.
@@ -69,8 +86,13 @@ def test_feedback_unknown_decision_404(env) -> None:
     client, _, _ = env
     res = client.post(
         "/feedback",
-        json={"decision_id": "nope", "model_label": 0, "final_label": 0,
-              "agrees": True, "moderator": "x"},
+        json={
+            "decision_id": "nope",
+            "model_label": 0,
+            "final_label": 0,
+            "agrees": True,
+            "moderator": "x",
+        },
     )
     assert res.status_code == 404
 
@@ -83,8 +105,13 @@ def test_feedback_invalid_labels_422(env) -> None:
     did = client.post("/predict", json={"text": "hello team"}).json()["decision_id"]
     res = client.post(
         "/feedback",
-        json={"decision_id": did, "model_label": 0, "final_label": 7,
-              "agrees": False, "moderator": "x"},
+        json={
+            "decision_id": did,
+            "model_label": 0,
+            "final_label": 7,
+            "agrees": False,
+            "moderator": "x",
+        },
     )
     assert res.status_code == 422
 
@@ -96,8 +123,7 @@ def test_store_persists_and_pending_skips_reviewed(tmp_path) -> None:
         fh.write(json.dumps({"decision_id": "b", "label": 0}) + "\n")
     store = FeedbackStore(tmp_path / "f.jsonl")
     store.append(
-        FeedbackRecord(decision_id="b", model_label=0, final_label=1,
-                       agrees=False, moderator="m")
+        FeedbackRecord(decision_id="b", model_label=0, final_label=1, agrees=False, moderator="m")
     )
     pending = store.pending_queue(decisions)
     assert [e["decision_id"] for e in pending] == ["a"]  # newest first, b reviewed

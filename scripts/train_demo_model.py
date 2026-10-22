@@ -50,9 +50,7 @@ def main() -> None:
 
     preds = pipe.predict([e.text for e in test])
     scores = pipe.predict_proba([e.text for e in test])[:, 1]
-    metrics = classification_metrics(
-        [e.label for e in test], preds.tolist(), scores.tolist()
-    )
+    metrics = classification_metrics([e.label for e in test], preds.tolist(), scores.tolist())
     logger.info("Demo model test metrics: %s", json.dumps(metrics))
 
     artifact_dir = REPO_ROOT / "artifacts"

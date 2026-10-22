@@ -52,7 +52,4 @@ def has_pii(text: str) -> bool:
     """True if any scrubber pattern matches (used to flag log entries)."""
     if not text:
         return False
-    return any(
-        pattern.search(text)
-        for pattern in (_EMAIL_RE, _URL_RE, _MENTION_RE, _PHONE_RE)
-    )
+    return any(pattern.search(text) for pattern in (_EMAIL_RE, _URL_RE, _MENTION_RE, _PHONE_RE))

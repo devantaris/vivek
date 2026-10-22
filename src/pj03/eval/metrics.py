@@ -28,9 +28,7 @@ def macro_f1(y_true: Sequence[int], y_pred: Sequence[int]) -> float:
         ValueError: If inputs are empty or have mismatched lengths.
     """
     if len(y_true) != len(y_pred):
-        raise ValueError(
-            f"y_true ({len(y_true)}) and y_pred ({len(y_pred)}) lengths differ"
-        )
+        raise ValueError(f"y_true ({len(y_true)}) and y_pred ({len(y_pred)}) lengths differ")
     if len(y_true) == 0:
         raise ValueError("metric inputs are empty")
     return float(f1_score(y_true, y_pred, average="macro", zero_division=0))
@@ -53,20 +51,12 @@ def classification_metrics(
         ``accuracy``, and optionally ``auc``.
     """
     if len(y_true) != len(y_pred):
-        raise ValueError(
-            f"y_true ({len(y_true)}) and y_pred ({len(y_pred)}) lengths differ"
-        )
+        raise ValueError(f"y_true ({len(y_true)}) and y_pred ({len(y_pred)}) lengths differ")
     metrics = {
         "macro_f1": macro_f1(y_true, y_pred),
-        "f1_hateful": float(
-            f1_score(y_true, y_pred, pos_label=1, zero_division=0)
-        ),
-        "precision": float(
-            precision_score(y_true, y_pred, average="macro", zero_division=0)
-        ),
-        "recall": float(
-            recall_score(y_true, y_pred, average="macro", zero_division=0)
-        ),
+        "f1_hateful": float(f1_score(y_true, y_pred, pos_label=1, zero_division=0)),
+        "precision": float(precision_score(y_true, y_pred, average="macro", zero_division=0)),
+        "recall": float(recall_score(y_true, y_pred, average="macro", zero_division=0)),
         "accuracy": float(accuracy_score(y_true, y_pred)),
     }
     if y_score is not None:

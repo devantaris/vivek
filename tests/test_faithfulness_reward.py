@@ -19,9 +19,7 @@ class TestFaithfulness:
         tokens = ["i", "hate", "all", "of", "them"]
         attribution = [0.0, 5.0, 4.0, 0.0, 0.1]
         probs = {" ".join(tokens): 0.9, "i of them": 0.1, "i all of them": 0.6}
-        comp = comprehensiveness(
-            lambda t: probs[t], tokens, attribution, k=2
-        )
+        comp = comprehensiveness(lambda t: probs[t], tokens, attribution, k=2)
         assert comp == pytest.approx(0.9 - 0.1)
 
     def test_sufficiency_keeps_prediction(self) -> None:

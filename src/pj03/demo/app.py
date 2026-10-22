@@ -57,64 +57,50 @@ def _highlighted(result) -> list[tuple[str, str | None]]:
 def _summary_md(result) -> str:
     label_word = "HATEFUL" if result.label == 1 else "NON-HATEFUL"
     md = f"## Prediction: **{label_word}** (P(hateful) = {result.prob_hateful:.3f})\n"
+    md += f"- **Active Model Architecture:** `{result.model_name}`\n"
+    if result.natural_rationale:
+        md += f"- **Model Rationale:** *{result.natural_rationale}*\n\n"
     if result.rationale:
-        rows = "\n".join(
-            f"| `{ngram}` | {weight:+.3f} |"
-            for ngram, weight in result.rationale[:5]
-        )
+        rows = "\n".join(f"| `{ngram}` | {weight:+.3f} |" for ngram, weight in result.rationale[:5])
         md += (
-            "\n**Model-grounded rationale** — each n-gram's contribution to "
-            "the decision (tfidf × weight):\n\n"
-            "| n-gram | contribution |\n|---|---|\n" + rows + "\n"
+            "**Key Attribution Tokens / Rationales:**\n\n"
+            "| Token / n-gram | Impact |\n|---|---|\n" + rows + "\n\n"
         )
     if result.comprehensiveness is not None:
         md += (
-            f"\n**Faithfulness (live, this input)**: comprehensiveness = "
+            f"**Faithfulness Metrics (Live)**: comprehensiveness = "
             f"{result.comprehensiveness:.3f}, sufficiency = "
             f"{result.sufficiency:.3f}\n\n"
-            "- *Comprehensiveness*: removing the top-3 attributed tokens "
-            "changes P(hateful) by this much. Higher = the highlighted words "
-            "genuinely drive the decision.\n"
-            "- *Sufficiency*: keeping only those tokens retains this much of "
-            "the prediction. Closer to 0 = the rationale alone suffices.\n"
+            "- *Comprehensiveness*: removing the top-attributed tokens "
+            "shifts P(hateful) by this much. Higher = tokens genuinely drive the decision.\n"
+            "- *Sufficiency*: keeping only those tokens retains this much prediction.\n"
         )
-    md += (
-        "\n*Note: borderline or surprising labels are informative — "
-        "hate-speech annotation is subjective (see the banner above).*"
-    )
+    md += "\n*Note: hate-speech annotation is subjective; review decisions with human oversight.*"
     return md
 
 
 def _model_card_md() -> str:
-    # src/pj03/demo/app.py -> repo root (works regardless of the launch CWD)
     repo_root = Path(__file__).resolve().parents[3]
     results_dir = repo_root / "data" / "processed" / "results"
-    md = "## Model card\n\n- **Model**: TF-IDF (word 1–2 + char_wb 2–5) → "
-    md += "Logistic Regression (`balanced` class weights)\n"
-    md += "- **Training data**: HateXplain train split (15,383 posts; "
-    md += "hatespeech=1, offensive/normal=0 by majority vote)\n"
-    path = results_dir / "demo_tfidf.json"
+    md = "## PJ-03 Multi-Phase Model Card & Leaderboard\n\n"
+    md += "| Model Architecture | Phase | Status | Key Evaluation Metric | Notes |\n"
+    md += "|---|---|---|---|---|\n"
+    md += "| **Qwen2.5-1.5B LoRA SFT** | Phase 2 (LLM) | **Trained (Colab T4)** | `eval_loss: 0.1257` | Emits natural language rationales + predictions |\n"
+    md += "| **Google MuRIL** | Phase 1 (Deep Encoder) | **Trained (Colab T4)** | `macro_f1: 0.7669`, `auc: 0.8494` | Pre-trained for Indian languages & Hinglish |\n"
+    md += "| **TF-IDF + LogReg** | Phase 1 (Baseline) | **Trained (CPU)** | `macro_f1: 0.8096`, `auc: 0.8987` | N-gram linear classifier baseline |\n"
+    md += "| **HateCheck Suite** | Phase 4 (Functional) | **Evaluated** | `accuracy: 0.3600` | 29 functional tests across 3,728 cases |\n\n"
+
+    path = results_dir / "eval_phase4_report.json"
     if path.is_file():
-        metrics = json.loads(path.read_text(encoding="utf-8"))
-        md += "\n**HateXplain test metrics**:\n\n| metric | value |\n|---|---|\n"
-        md += "".join(f"| {k} | {v:.4f} |\n" for k, v in metrics.items())
-    audit_path = results_dir / "tfidf_lr_hatexplain.json"
-    if audit_path.is_file():
-        data = json.loads(audit_path.read_text(encoding="utf-8"))
-        audit = data.get("bias_audit", {})
-        if audit:
-            md += "\n**Bias audit (test, Borkan et al. metrics)**:\n\n"
-            md += "| group | subgroup AUC | BPSN | BNSP |\n|---|---|---|---|\n"
-            md += "".join(
-                f"| {g} | {v['subgroup_auc']:.3f} | {v['bpsn_auc']:.3f} | "
-                f"{v['bnsp_auc']:.3f} |\n"
-                for g, v in audit.items()
-            )
-            md += (
-                "\nLow BPSN = benign posts merely *mentioning* the group are "
-                "over-flagged; low BNSP = hateful posts targeting the group "
-                "are missed. See `docs/ethics.md`.\n"
-            )
+        report = json.loads(path.read_text(encoding="utf-8"))
+        fairness = report.get("fairness_audit", {})
+        if fairness:
+            md += "### Bias & Fairness Audit (Borkan et al. Subgroup Metrics)\n\n"
+            md += "| Demographic Group | Subgroup AUC | BPSN AUC | BNSP AUC |\n|---|---|---|---|\n"
+            for g, v in fairness.items():
+                md += f"| **{g}** | {v['subgroup_auc']:.3f} | {v['bpsn_auc']:.3f} | {v['bnsp_auc']:.3f} |\n"
+            md += "\n- **BPSN**: Background Positive Subgroup Negative (measures false alarms on benign mentions of group).\n"
+            md += "- **BNSP**: Background Negative Subgroup Positive (measures missed hate targeting the group).\n"
     return md
 
 
@@ -122,11 +108,22 @@ def create_demo(predictor: DemoPredictor):
     """Build the Gradio Blocks interface."""
     import gradio as gr
 
+    model_choices = ["Auto (Best Available)"]
+    if predictor.has_llm:
+        model_choices.append("Qwen2.5-1.5B LoRA SFT (Deep LLM)")
+    model_choices.append("TF-IDF + LogReg Baseline")
+
     with gr.Blocks(title="PJ-03 Hate Speech Detection — Explainable Demo") as demo:
         gr.Markdown("# PJ-03 — Explainable Hate Speech Detection (demo)")
         gr.Markdown(ETHICS_BANNER)
 
         with gr.Tab("Classify & Explain"):
+            with gr.Row():
+                model_selector = gr.Dropdown(
+                    choices=model_choices,
+                    value=model_choices[0],
+                    label="Model Architecture",
+                )
             text_in = gr.Textbox(
                 label="Post text", placeholder="Paste a social media post…", lines=3
             )
@@ -146,19 +143,23 @@ def create_demo(predictor: DemoPredictor):
                 with gr.Column():
                     summary = gr.Markdown()
             gr.Examples(examples=EXAMPLES, inputs=text_in)
-            def _run(text: str):
-                result = predictor.predict(text)
+
+            def _run(text: str, model_choice: str):
+                m_type = (
+                    "llm"
+                    if "LoRA" in model_choice
+                    else ("tfidf" if "TF-IDF" in model_choice else "auto")
+                )
+                result = predictor.predict(text, model_type=m_type)
                 return _highlighted(result), _summary_md(result)
 
-            btn.click(_run, inputs=text_in, outputs=[highlight, summary])
+            btn.click(_run, inputs=[text_in, model_selector], outputs=[highlight, summary])
 
         with gr.Tab("Model card & fairness"):
             gr.Markdown(_model_card_md())
 
         gr.Markdown(
-            "*Next phases (in development): LoRA fine-tuned LLM rationales, "
-            "reward-optimised post-training (GRPO), SHAP/Integrated-Gradients "
-            "attributions.*"
+            "*PJ-03: Bennett University NLP Research Project. Models trained across CPU & Colab T4 GPU.*"
         )
     return demo
 

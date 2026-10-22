@@ -9,13 +9,9 @@ def test_each_pattern() -> None:
     assert scrub("mail me at john.doe@example.com now") == (
         f"mail me at {PLACEHOLDERS['email']} now"
     )
-    assert scrub("see https://x.com/post?a=1 please") == (
-        f"see {PLACEHOLDERS['url']} please"
-    )
+    assert scrub("see https://x.com/post?a=1 please") == (f"see {PLACEHOLDERS['url']} please")
     assert scrub("hey @devansh look") == f"hey {PLACEHOLDERS['mention']} look"
-    assert scrub("call +91 98765 43210 ok") == (
-        f"call {PLACEHOLDERS['phone']} ok"
-    )
+    assert scrub("call +91 98765 43210 ok") == (f"call {PLACEHOLDERS['phone']} ok")
 
 
 def test_email_inside_url_not_double_masked() -> None:

@@ -50,9 +50,7 @@ def _majority_targets(targets: list[list[str]]) -> str | None:
     counts = Counter(t for per_annotator in targets for t in per_annotator)
     n = len(targets)
     agreed = sorted(
-        t.lower()
-        for t, c in counts.items()
-        if c >= max(2, (n + 1) // 2) and t.lower() != "other"
+        t.lower() for t, c in counts.items() if c >= max(2, (n + 1) // 2) and t.lower() != "other"
     )
     return "|".join(agreed) or None
 
@@ -120,7 +118,9 @@ def build_processed(raw_dir: str, out_dir: str, mode: str = "strict_hate") -> Da
     return stats
 
 
-def iter_examples(split: Split, processed_dir: str = "data/processed/hatexplain") -> Iterator[Example]:
+def iter_examples(
+    split: Split, processed_dir: str = "data/processed/hatexplain"
+) -> Iterator[Example]:
     """Yield :class:`Example` objects from the processed HateXplain splits."""
     path = Path(processed_dir) / f"{split.value}.jsonl"
     if not path.is_file():

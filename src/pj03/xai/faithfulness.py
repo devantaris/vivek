@@ -50,9 +50,7 @@ def comprehensiveness(
         ValueError: On mismatched lengths or ``k`` larger than the tokens.
     """
     if len(attribution) != len(tokens):
-        raise ValueError(
-            f"attribution length {len(attribution)} != tokens length {len(tokens)}"
-        )
+        raise ValueError(f"attribution length {len(attribution)} != tokens length {len(tokens)}")
     if k < 0 or k > len(tokens):
         raise ValueError(f"k={k} must be between 0 and len(tokens)={len(tokens)}")
 
@@ -92,9 +90,7 @@ def sufficiency(
         ValueError: On mismatched lengths or invalid ``k``.
     """
     if len(attribution) != len(tokens):
-        raise ValueError(
-            f"attribution length {len(attribution)} != tokens length {len(tokens)}"
-        )
+        raise ValueError(f"attribution length {len(attribution)} != tokens length {len(tokens)}")
     if k < 0 or k > len(tokens):
         raise ValueError(f"k={k} must be between 0 and len(tokens)={len(tokens)}")
 

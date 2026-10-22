@@ -37,6 +37,7 @@ class PredictRequest(BaseModel):
     text: str = Field(min_length=1, max_length=20_000)
     threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     scrub_pii: bool = False  # scrub before *prediction* (logs always scrub)
+    model_type: str = Field(default="auto")  # "auto", "llm", or "tfidf"
 
 
 class RationaleItem(BaseModel):
@@ -53,6 +54,8 @@ class PredictResponse(BaseModel):
     label: int
     prob_hateful: float
     threshold: float
+    model_name: str
+    natural_rationale: str | None = None
     rationale: list[RationaleItem]
     comprehensiveness: float | None
     sufficiency: float | None
@@ -101,25 +104,23 @@ def create_app(
         flagged = has_pii(req.text)
         model_input = scrub(req.text) if (flagged and req.scrub_pii) else req.text
 
-        result = predictor.predict(model_input)
+        result = predictor.predict(model_input, model_type=req.model_type)
         label = int(result.prob_hateful >= req.threshold)
         response = PredictResponse(
             decision_id=decision_id,
             label=label,
             prob_hateful=round(result.prob_hateful, 4),
             threshold=req.threshold,
+            model_name=result.model_name,
+            natural_rationale=result.natural_rationale,
             rationale=[
                 RationaleItem(ngram=ngram, contribution=round(weight, 4))
                 for ngram, weight in result.rationale
             ],
             comprehensiveness=(
-                round(result.comprehensiveness, 4)
-                if result.comprehensiveness is not None
-                else None
+                round(result.comprehensiveness, 4) if result.comprehensiveness is not None else None
             ),
-            sufficiency=(
-                round(result.sufficiency, 4) if result.sufficiency is not None else None
-            ),
+            sufficiency=(round(result.sufficiency, 4) if result.sufficiency is not None else None),
             pii_in_input=flagged,
             input_scrubbed_for_prediction=bool(flagged and req.scrub_pii),
             latency_ms=round((time.perf_counter() - started) * 1000, 2),

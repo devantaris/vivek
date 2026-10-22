@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import joblib
 import numpy as np
@@ -36,46 +37,132 @@ class PredictionResult:
     rationale: list[tuple[str, float]] = field(default_factory=list)
     comprehensiveness: float | None = None
     sufficiency: float | None = None
+    model_name: str = "tfidf"
+    natural_rationale: str | None = None
 
 
 class DemoPredictor:
     """Loads (or trains) the demo pipeline and answers prediction requests."""
 
-    def __init__(self, artifact_path: str | Path = DEFAULT_ARTIFACT) -> None:
+    has_llm: bool = False
+    _llm_model: Any = None
+    _llm_tokenizer: Any = None
+    llm_adapter_path: Path = Path("checkpoints/sft")
+    llm_base_model_name: str = "Qwen/Qwen2.5-1.5B-Instruct"
+
+    def __init__(
+        self,
+        artifact_path: str | Path = DEFAULT_ARTIFACT,
+        llm_adapter_path: str | Path = "checkpoints/sft",
+        llm_base_model_name: str = "Qwen/Qwen2.5-1.5B-Instruct",
+    ) -> None:
         path = Path(artifact_path)
         if not path.is_file():
             raise FileNotFoundError(
-                f"{path} not found - train it first: "
-                "python scripts/train_demo_model.py"
+                f"{path} not found - train it first: python scripts/train_demo_model.py"
             )
         bundle = joblib.load(path)
         self.pipeline = bundle["pipeline"]
         self.metadata: dict = bundle.get("metadata", {})
         test_metrics = self.metadata.get("test_metrics", {})
-        logger.info(
-            "Loaded demo model %s (macro_f1=%s)", path, test_metrics.get("macro_f1")
+        logger.info("Loaded demo model %s (macro_f1=%s)", path, test_metrics.get("macro_f1"))
+
+        self.llm_adapter_path = Path(llm_adapter_path)
+        self.llm_base_model_name = llm_base_model_name
+        self.has_llm = (self.llm_adapter_path / "adapter_model.safetensors").is_file()
+        self._llm_model = None
+        self._llm_tokenizer = None
+        if self.has_llm:
+            logger.info("Fine-tuned LoRA SFT model detected at %s", self.llm_adapter_path)
+
+    def load_llm(self) -> None:
+        """Lazily load the fine-tuned LoRA model for deep generation."""
+        if self._llm_model is not None or not self.has_llm:
+            return
+        import torch
+        from peft import PeftModel
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        logger.info("Loading fine-tuned LoRA model: %s ...", self.llm_adapter_path)
+        self._llm_tokenizer = AutoTokenizer.from_pretrained(str(self.llm_adapter_path))
+        base_model = AutoModelForCausalLM.from_pretrained(
+            self.llm_base_model_name,
+            dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        )
+        self._llm_model = PeftModel.from_pretrained(base_model, str(self.llm_adapter_path)).eval()
+        logger.info("LoRA SFT model loaded successfully.")
+
+    def predict_llm(self, text: str) -> PredictionResult:
+        """Classify and explain using the fine-tuned Qwen2.5-1.5B LoRA LLM."""
+        self.load_llm()
+        if self._llm_model is None or self._llm_tokenizer is None:
+            return self.predict_tfidf(text)
+
+        import torch
+
+        from pj03.sft.prompt_templates import format_prompt, parse_output
+
+        prompt = format_prompt(text)
+        inputs = self._llm_tokenizer(prompt, return_tensors="pt")
+        device = next(self._llm_model.parameters()).device
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+
+        with torch.no_grad():
+            logits = self._llm_model(**inputs).logits[:, -1, :]
+            tok_1 = self._llm_tokenizer("1", add_special_tokens=False)["input_ids"][0]
+            tok_0 = self._llm_tokenizer("0", add_special_tokens=False)["input_ids"][0]
+            probs = torch.softmax(logits[:, [tok_0, tok_1]], dim=-1)
+            prob_hateful = float(probs[0, 1].item())
+
+            out = self._llm_model.generate(**inputs, max_new_tokens=40, do_sample=False)
+
+        gen = self._llm_tokenizer.decode(
+            out[0][inputs["input_ids"].shape[1] :], skip_special_tokens=True
+        ).strip()
+        label, rationale_text = parse_output(gen)
+
+        tokens = text.split()
+        rationale: list[tuple[str, float]] = []
+        if rationale_text:
+            key_words = set(rationale_text.lower().replace(":", " ").replace(",", " ").split())
+            for tok in tokens:
+                clean = "".join(c for c in tok.lower() if c.isalnum())
+                if (
+                    clean
+                    and clean in key_words
+                    and clean not in {"the", "key", "words", "are", "post", "contains"}
+                ):
+                    weight = 0.8 if label == 1 else -0.8
+                    rationale.append((clean, weight))
+
+        if not rationale:
+            contributions = self._token_contributions(text)
+            rationale = sorted(contributions, key=lambda x: -abs(x[1]))[:5]
+
+        return PredictionResult(
+            text=text,
+            label=label if label in (0, 1) else int(prob_hateful >= 0.5),
+            prob_hateful=prob_hateful,
+            rationale=rationale,
+            model_name="Qwen2.5-1.5B LoRA SFT",
+            natural_rationale=rationale_text,
         )
 
-    # ------------------------------------------------------------------ core
-    def predict(self, text: str, top_k: int = 5, compute_faithfulness: bool = True) -> PredictionResult:
-        """Classify ``text`` and explain the decision.
-
-        Args:
-            text: Raw social-media-style post.
-            top_k: How many top-contributing n-grams to return.
-            compute_faithfulness: Also run live comprehensiveness/sufficiency.
-
-        Returns:
-            :class:`PredictionResult` with label, probability, rationale and
-            (optionally) faithfulness scores.
-        """
+    def predict_tfidf(
+        self, text: str, top_k: int = 5, compute_faithfulness: bool = True
+    ) -> PredictionResult:
+        """Classify and explain using the TF-IDF+LogReg baseline."""
         prob = float(self.pipeline.predict_proba([text])[0, 1])
         label = int(prob >= 0.5)
         contributions = self._token_contributions(text)
         rationale = sorted(contributions, key=lambda x: -abs(x[1]))[:top_k]
 
         result = PredictionResult(
-            text=text, label=label, prob_hateful=prob, rationale=rationale
+            text=text,
+            label=label,
+            prob_hateful=prob,
+            rationale=rationale,
+            model_name="TF-IDF + LogReg Baseline",
         )
         if compute_faithfulness and contributions:
             tokens = text.split()
@@ -85,9 +172,45 @@ class DemoPredictor:
                 k = min(3, len(tokens))
                 result.comprehensiveness = comprehensiveness(probs_fn, tokens, attrib, k=k)
                 result.sufficiency = sufficiency(probs_fn, tokens, attrib, k=k)
-            except ValueError:  # degenerate input (single token etc.)
+            except ValueError:
                 pass
         return result
+
+    # ------------------------------------------------------------------ core
+    def predict(
+        self,
+        text: str,
+        top_k: int = 5,
+        compute_faithfulness: bool = True,
+        model_type: str = "tfidf",
+    ) -> PredictionResult:
+        """Classify ``text`` and explain the decision.
+
+        Args:
+            text: Raw social-media-style post.
+            top_k: How many top-contributing n-grams to return.
+            compute_faithfulness: Also run live comprehensiveness/sufficiency.
+            model_type: "llm", "tfidf", or "auto".
+
+        Returns:
+            :class:`PredictionResult` with label, probability, rationale and
+            (optionally) faithfulness scores.
+        """
+        if (
+            (model_type == "llm" or model_type == "auto")
+            and getattr(self, "has_llm", False)
+            and getattr(self, "_llm_model", None) is not None
+        ):
+            try:
+                return self.predict_llm(text)
+            except Exception as e:
+                logger.warning("LLM prediction failed (%s), falling back to TF-IDF", e)
+        elif model_type == "llm" and getattr(self, "has_llm", False):
+            try:
+                return self.predict_llm(text)
+            except Exception as e:
+                logger.warning("LLM prediction failed (%s), falling back to TF-IDF", e)
+        return self.predict_tfidf(text, top_k=top_k, compute_faithfulness=compute_faithfulness)
 
     # ------------------------------------------------------------ internals
     def _prob_fn(self):
@@ -139,10 +262,9 @@ class DemoPredictor:
         token also inherits the largest matching char n-gram weight. Tokens
         the model never used score 0.0.
         """
+
         def is_word_ngram(ngram: str) -> bool:
-            return bool(ngram) and all(
-                ch.isalnum() or ch in " '’-" for ch in ngram
-            )
+            return bool(ngram) and all(ch.isalnum() or ch in " '’-" for ch in ngram)
 
         weights: dict[str, float] = {}
         char_weights: list[tuple[str, float]] = []

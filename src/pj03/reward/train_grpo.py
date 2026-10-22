@@ -184,9 +184,7 @@ def run_grpo(
         logger.info("Loading and merging LoRA adapter from %s", model_path)
         base = PeftModel.from_pretrained(base, model_path).merge_and_unload()
 
-    predictor_builder = (
-        (lambda: build_predictor(model_path)) if use_faith_predictor else None
-    )
+    predictor_builder = (lambda: build_predictor(model_path)) if use_faith_predictor else None
     reward_fn = make_reward_fn(weights, predictor_builder)
 
     required = {"prompt", "post_text", "gold_label"}

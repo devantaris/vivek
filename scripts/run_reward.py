@@ -34,6 +34,7 @@ def load_grpo_dataset():
     if not path.is_file():
         raise FileNotFoundError(f"{path} not found - run python scripts/build_sft.py first.")
     ds = load_dataset("json", data_files=str(path))["train"]
+
     # gold_label is inside the completion; recover it from the completion text
     # to avoid a join with the schema here.
     def add_gold(rec: dict) -> dict:

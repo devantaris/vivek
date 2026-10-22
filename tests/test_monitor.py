@@ -81,8 +81,15 @@ def test_override_rate_alert(tmp_path) -> None:
         for i in range(10):
             fh.write(
                 json.dumps(
-                    {"decision_id": str(i), "model_label": 1, "final_label": 0,
-                     "agrees": i < 2, "moderator": "m", "note": "", "ts": "t"}
+                    {
+                        "decision_id": str(i),
+                        "model_label": 1,
+                        "final_label": 0,
+                        "agrees": i < 2,
+                        "moderator": "m",
+                        "note": "",
+                        "ts": "t",
+                    }
                 )
                 + "\n"
             )

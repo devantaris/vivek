@@ -32,9 +32,7 @@ def load_sft_split(name: str, n: int | None = None):
 
     path = REPO_ROOT / "data" / "processed" / "sft_hatexplain" / f"{name}.jsonl"
     if not path.is_file():
-        raise FileNotFoundError(
-            f"{path} not found - run python scripts/build_sft.py first."
-        )
+        raise FileNotFoundError(f"{path} not found - run python scripts/build_sft.py first.")
     ds = load_dataset("json", data_files=str(path))["train"]
     return ds.select(range(min(n, len(ds)))) if n else ds
 

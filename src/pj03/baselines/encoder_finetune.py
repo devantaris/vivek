@@ -105,9 +105,9 @@ def train_encoder(
         per_device_eval_batch_size=batch_size,
         num_train_epochs=epochs,
         eval_strategy="epoch",
-        save_strategy="no",          # no checkpoint bloat; save_model controls final save
+        save_strategy="no",  # no checkpoint bloat; save_model controls final save
         logging_steps=20,
-        report_to="none",            # no wandb unless explicitly configured
+        report_to="none",  # no wandb unless explicitly configured
         seed=seed,
     )
     trainer = Trainer(

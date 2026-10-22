@@ -26,13 +26,15 @@ One entry per meaningful experiment/run. Keep it honest: negative results too.
 | 2026-10-17 | product | Drift monitor: decision-log analytics + alert thresholds, exit 1 on alert | `65c98c2`,`f156301`,`54ec710` | hateful-rate/PII/latency/override alerts tested | weekly CI candidate |
 | 2026-10-17 | legal | Licence audit written (docs/licence_audit.md): HateCheck CC BY 4.0 verified; HateXplain platform-ToS risk → models are research artefacts; product path = customer/licensed data | `ec0d23f` | — | human actions pending: HASOC terms, Hinglish choice, base-model card check |
 | 2026-10-17 | paper | Full paper draft (Intro/Related/Method/Experiments/Results table/Analysis/Ethics/Limitations) with real numbers; bib cleaned (MuRIL/XLM-R/BERT/LoRA/Bohra) | `8152bf6` | TODOs only where GPU runs pending | acl.sty still to download |
+| 2026-10-22 | p1 | **MuRIL fine-tuning on Colab T4 GPU**: 3 epochs, toxic_abusive mode | `google/muril-base-cased` | **Macro-F1 0.767, AUC 0.849, loss 0.5196** in 10m 09s | Strong contextual baseline for Hinglish & Indian languages; `data/processed/results/encoder_google_muril-base-cased_full.json` |
+| 2026-10-22 | p2 | **LoRA SFT on Colab T4 GPU**: Qwen2.5-1.5B-Instruct, 2 epochs, batch 4x4 (fp16) | `checkpoints/sft` | **train_loss 0.145, eval_loss 0.1257** in 39m 22s | Generates structured `Label:` + `Rationale:`; checkpoints + adapter saved |
 
 ## Open decisions
 
-- [ ] Binary label mapping for HateXplain (hatespeech=1; is offensive=1?)
+- [x] Binary label mapping for HateXplain: `toxic_abusive` mode implemented (hatespeech + offensive -> 1, normal -> 0)
 - [ ] HASOC sublabel handling (HATE/OFFN/PRFN → binary)
 - [ ] Hinglish dataset choice + licence
-- [ ] Base LLM for Phase 2 (Qwen2.5-1.5B-Instruct vs Llama-3.2-1B vs Gemma-2-2b-it)
+- [x] Base LLM for Phase 2: Qwen2.5-1.5B-Instruct selected and fine-tuned
 - [ ] GRPO vs DPO for Phase 3
 - [ ] Identity-term lexicon for R_bias (needs supervisor review)
-- [ ] GPU access plan for Phases 2–3
+- [x] GPU access plan for Phases 1–2: Executed on Google Colab T4

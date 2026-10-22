@@ -16,6 +16,7 @@ NO_RATIONALE = "Label: 1"
 def _probs(table: dict[str, float]):
     def predict(text: str) -> float:
         return table[text]
+
     return predict
 
 
