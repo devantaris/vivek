@@ -30,6 +30,10 @@ def test_to_binary() -> None:
     assert _to_binary(CLASS_OFFENSIVE) == 0
     assert _to_binary(CLASS_NORMAL) == 0
 
+    assert _to_binary(CLASS_HATESPEECH, mode="toxic_abusive") == 1
+    assert _to_binary(CLASS_OFFENSIVE, mode="toxic_abusive") == 1
+    assert _to_binary(CLASS_NORMAL, mode="toxic_abusive") == 0
+
 
 def test_majority_targets_majority_rule() -> None:
     targets = [["Islam", "Hindu"], ["Islam"], ["Islam", "Other"]]

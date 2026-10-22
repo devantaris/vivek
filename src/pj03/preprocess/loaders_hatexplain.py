@@ -66,17 +66,18 @@ def _majority_rationale_mask(rationales: list[list[int]]) -> list[int] | None:
     return [i for i, votes in enumerate(per_token) if votes >= 2]
 
 
-def _to_binary(label: int) -> int:
-    """Hatespeech -> 1; normal/offensive -> 0.
+def _to_binary(label: int, mode: str = "strict_hate") -> int:
+    """Hatespeech -> 1; normal/offensive -> 0 under 'strict_hate'.
 
-    DECISION (documented in docs/experiment_log.md): 'offensive but not
-    hateful' is mapped to 0, matching the paper's hate-focused framing.
-    Revisit if the supervisor disagrees.
+    If mode == 'toxic_abusive': both hatespeech and offensive are mapped to 1
+    (toxic/abusive), while only normal is 0.
     """
+    if mode == "toxic_abusive":
+        return 1 if label in (CLASS_HATESPEECH, CLASS_OFFENSIVE) else 0
     return 1 if label == CLASS_HATESPEECH else 0
 
 
-def build_processed(raw_dir: str, out_dir: str) -> DatasetStats:
+def build_processed(raw_dir: str, out_dir: str, mode: str = "strict_hate") -> DatasetStats:
     """Convert raw HateXplain JSONL to the unified schema and write splits.
 
     Writes ``{split}.jsonl`` files under ``out_dir`` and returns stats.
@@ -97,7 +98,7 @@ def build_processed(raw_dir: str, out_dir: str) -> DatasetStats:
                     Example(
                         id=f"{SOURCE}:{row['id']}",
                         text=" ".join(row["post_tokens"]),
-                        label=_to_binary(majority),
+                        label=_to_binary(majority, mode=mode),
                         language=Language.EN,
                         source_dataset=SOURCE,
                         split=split,

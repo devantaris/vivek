@@ -20,21 +20,22 @@ from pj03.utils.logging import get_logger  # noqa: E402
 logger = get_logger("pj03.build")
 
 
-def build_hatexplain() -> None:
+def build_hatexplain(mode: str = "strict_hate") -> None:
     raw = REPO_ROOT / "data" / "raw" / "hatexplain"
     out = REPO_ROOT / "data" / "processed" / "hatexplain"
     if not raw.is_dir():
         logger.error("Raw HateXplain not found at %s - run make data first.", raw)
         return
-    stats = loaders_hatexplain.build_processed(str(raw), str(out))
+    stats = loaders_hatexplain.build_processed(str(raw), str(out), mode=mode)
     logger.info(
-        "HateXplain: train=%d val=%d test=%d positive=%d negative=%d -> %s",
-        stats.n_train, stats.n_validation, stats.n_test,
+        "HateXplain [%s]: train=%d val=%d test=%d positive=%d negative=%d -> %s",
+        mode, stats.n_train, stats.n_validation, stats.n_test,
         stats.n_positive, stats.n_negative, out,
     )
 
 
-def build_hatecheck() -> None:
+def build_hatecheck(mode: str = "strict_hate") -> None:
+    del mode
     raw = REPO_ROOT / "data" / "raw" / "hatecheck"
     out = REPO_ROOT / "data" / "processed" / "hatecheck"
     if not raw.is_dir():
@@ -53,10 +54,16 @@ BUILDERS = {"hatexplain": build_hatexplain, "hatecheck": build_hatecheck}
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", choices=[*BUILDERS, "all"], default="all")
+    parser.add_argument(
+        "--mode",
+        choices=["strict_hate", "toxic_abusive"],
+        default="strict_hate",
+        help="Label mapping mode for HateXplain (strict_hate: 1=hate, 0=off/norm; toxic_abusive: 1=hate+off, 0=norm)",
+    )
     args = parser.parse_args()
     names = list(BUILDERS) if args.dataset == "all" else [args.dataset]
     for name in names:
-        BUILDERS[name]()
+        BUILDERS[name](mode=args.mode)
 
 
 if __name__ == "__main__":

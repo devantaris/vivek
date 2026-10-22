@@ -37,7 +37,7 @@ def load_grpo_dataset():
     # gold_label is inside the completion; recover it from the completion text
     # to avoid a join with the schema here.
     def add_gold(rec: dict) -> dict:
-        rec["gold_label"] = int(rec["completion"].split("Label:")[1][0])
+        rec["gold_label"] = int(rec["completion"].split("Label:")[1].strip()[0])
         rec["post_text"] = rec["prompt"].split("Post:", 1)[1].strip()
         return rec
 
