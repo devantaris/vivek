@@ -98,3 +98,22 @@ def test_reward_fn_returns_one_float_per_completion(weights) -> None:
     fn = make_reward_fn(weights)
     out = fn(prompts=["p"] * 4, completions=[FAITHFUL] * 4, gold_label=[1] * 4)
     assert len(out) == 4 and all(isinstance(r, float) for r in out)
+
+
+def test_resolve_model_and_adapter_directory(tmp_path) -> None:
+    from pj03.reward.train_grpo import _resolve_model_and_adapter
+
+    # Huggingface model ID string
+    base, adapter = _resolve_model_and_adapter("Qwen/Qwen2.5-1.5B-Instruct")
+    assert base == "Qwen/Qwen2.5-1.5B-Instruct"
+    assert adapter is None
+
+    # Mock adapter directory
+    adapter_dir = tmp_path / "mock_adapter"
+    adapter_dir.mkdir()
+    cfg_file = adapter_dir / "adapter_config.json"
+    cfg_file.write_text('{"base_model_name_or_path": "custom/base-model"}', encoding="utf-8")
+
+    base, adapter = _resolve_model_and_adapter(str(adapter_dir))
+    assert base == "custom/base-model"
+    assert adapter == str(adapter_dir)

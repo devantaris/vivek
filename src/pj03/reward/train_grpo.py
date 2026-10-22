@@ -78,6 +78,21 @@ def make_reward_fn(
     return reward_fn
 
 
+def _resolve_model_and_adapter(model_path: str) -> tuple[str, str | None]:
+    """Given a model path or HuggingFace ID, resolve base model and adapter dir."""
+    import json
+    path = Path(model_path)
+    adapter_cfg = path / "adapter_config.json"
+    if path.is_dir() and adapter_cfg.is_file():
+        try:
+            cfg = json.loads(adapter_cfg.read_text(encoding="utf-8"))
+            base_name = cfg.get("base_model_name_or_path", "Qwen/Qwen2.5-1.5B-Instruct")
+            return base_name, str(path)
+        except Exception as e:
+            logger.warning("Could not parse adapter_config.json (%s), assuming %s", e, model_path)
+    return model_path, None
+
+
 def build_predictor(model_path: str, device: str = "cuda") -> Callable[[str], float]:
     """Build a P(hateful) callable from the SFT model (for R_faith).
 
@@ -97,10 +112,19 @@ def build_predictor(model_path: str, device: str = "cuda") -> Callable[[str], fl
 
     from pj03.sft.prompt_templates import format_prompt
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    base_name, adapter_path = _resolve_model_and_adapter(model_path)
+    tok_source = adapter_path or base_name
+    tokenizer = AutoTokenizer.from_pretrained(tok_source)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(model_path).to(device).eval()
+
+    dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    model = AutoModelForCausalLM.from_pretrained(base_name, torch_dtype=dtype)
+    if adapter_path:
+        from peft import PeftModel
+
+        model = PeftModel.from_pretrained(model, adapter_path)
+    model = model.to(device).eval()
 
     hateful_id = tokenizer("1", add_special_tokens=False)["input_ids"][0]
 
@@ -175,14 +199,14 @@ def run_grpo(
     weights = (reward_config or {}).get("reward", {}).get("weights", None)
     logger.info("GRPO reward weights: %s", weights)
 
-    # Load the SFT model; merge the LoRA adapter if one is present.
-    from transformers import AutoModelForCausalLM as _AM  # noqa: F401
-
-    base = AutoModelForCausalLM.from_pretrained(model_path, dtype=torch.bfloat16)
-    has_adapter = Path(model_path).is_dir() and any(Path(model_path).glob("adapter_*"))
-    if has_adapter:
-        logger.info("Loading and merging LoRA adapter from %s", model_path)
-        base = PeftModel.from_pretrained(base, model_path).merge_and_unload()
+    # Load the base model and merge the LoRA adapter if one is present.
+    base_name, adapter_path = _resolve_model_and_adapter(model_path)
+    dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    logger.info("Loading base model %s for GRPO with dtype=%s", base_name, dtype)
+    base = AutoModelForCausalLM.from_pretrained(base_name, torch_dtype=dtype)
+    if adapter_path:
+        logger.info("Loading and merging LoRA adapter from %s into %s", adapter_path, base_name)
+        base = PeftModel.from_pretrained(base, adapter_path).merge_and_unload()
 
     predictor_builder = (lambda: build_predictor(model_path)) if use_faith_predictor else None
     reward_fn = make_reward_fn(weights, predictor_builder)

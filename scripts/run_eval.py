@@ -32,6 +32,18 @@ logger = get_logger("pj03.eval")
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="configs/eval.yaml")
+    parser.add_argument(
+        "--model",
+        choices=["tfidf", "llm"],
+        default="tfidf",
+        help="Which model architecture to evaluate (tfidf or llm).",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Optional limit on test examples (useful for fast CPU LLM evaluation).",
+    )
     parser.add_argument("overrides", nargs="*", help="e.g. faithfulness.k=5")
     args = parser.parse_args()
 
@@ -48,15 +60,35 @@ def main() -> None:
         )
 
     predictor = DemoPredictor(artifact_path)
-    logger.info("Running Phase 4 comprehensive evaluation on: %s", artifact_path.name)
+    model_name = "TF-IDF + LogReg Baseline"
+    if args.model == "llm":
+        logger.info("Initializing and loading Qwen2.5-1.5B LoRA model...")
+        predictor.load_llm()
+        model_name = "Qwen2.5-1.5B LoRA SFT"
+
+    logger.info("Running Phase 4 comprehensive evaluation on: %s", model_name)
 
     # 1. In-domain evaluation on HateXplain test split
     test_examples = list(loaders_hatexplain.iter_examples(Split.TEST))
+    if args.limit:
+        test_examples = test_examples[: args.limit]
+
     test_texts = [ex.text for ex in test_examples]
     test_labels = [ex.label for ex in test_examples]
 
-    preds = predictor.pipeline.predict(test_texts).tolist()
-    scores = predictor.pipeline.predict_proba(test_texts)[:, 1].tolist()
+    if args.model == "llm":
+        logger.info("Running LLM inference across %d test examples...", len(test_texts))
+        preds = []
+        scores = []
+        for i, t in enumerate(test_texts):
+            res = predictor.predict(t, model_type="llm")
+            preds.append(res.label)
+            scores.append(res.prob_hateful)
+            if (i + 1) % 25 == 0:
+                logger.info("Progress: %d/%d evaluated", i + 1, len(test_texts))
+    else:
+        preds = predictor.pipeline.predict(test_texts).tolist()
+        scores = predictor.pipeline.predict_proba(test_texts)[:, 1].tolist()
 
     metrics = classification_metrics(test_labels, preds, scores)
     logger.info("In-domain HateXplain metrics: %s", metrics)
@@ -73,19 +105,26 @@ def main() -> None:
     logger.info("Fairness bias audit: %d groups audited", len(fairness_report))
 
     # 3. HateCheck functional suite
+    if args.model == "llm":
+        predict_fn = lambda batch: [predictor.predict(text, model_type="llm").label for text in batch]  # noqa: E731
+    else:
+        predict_fn = lambda batch: predictor.pipeline.predict(batch)  # noqa: E731
+
     hatecheck_report = run_hatecheck(
-        predict=lambda batch: predictor.pipeline.predict(batch),
-        model_name="tfidf_baseline",
+        predict=predict_fn,
+        model_name=model_name,
     )
     logger.info("HateCheck overall accuracy: %.4f", hatecheck_report["overall_accuracy"])
 
     # 4. Out-of-Distribution (OOD) comparison
     hatecheck_examples = list(loaders_hatecheck.iter_examples())
+    if args.limit:
+        hatecheck_examples = hatecheck_examples[: args.limit]
     ood_texts = [ex.text for ex in hatecheck_examples]
     ood_labels = [ex.label for ex in hatecheck_examples]
 
     ood_report = evaluate_ood(
-        predict=lambda batch: predictor.pipeline.predict(batch),
+        predict=predict_fn,
         in_domain_texts=test_texts,
         in_domain_labels=test_labels,
         ood_texts=ood_texts,
@@ -95,7 +134,7 @@ def main() -> None:
 
     # Compile unified evaluation artifact
     final_report = {
-        "model": "tfidf_word+char_logreg",
+        "model": model_name,
         "in_domain_metrics": metrics,
         "fairness_audit": fairness_report,
         "hatecheck_summary": {
@@ -112,7 +151,8 @@ def main() -> None:
 
     results_dir = REPO_ROOT / "data" / "processed" / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
-    out_path = results_dir / "eval_phase4_report.json"
+    report_filename = "eval_llm_report.json" if args.model == "llm" else "eval_phase4_report.json"
+    out_path = results_dir / report_filename
     out_path.write_text(json.dumps(final_report, indent=2), encoding="utf-8")
     logger.info("Phase 4 evaluation report saved -> %s", out_path)
 
@@ -133,10 +173,6 @@ def main() -> None:
             f"  - {g:12s} AUC={vals['subgroup_auc']:.3f} | BPSN={vals['bpsn_auc']:.3f} | BNSP={vals['bnsp_auc']:.3f}"
         )
     print("=" * 60 + "\n")
-
-
-if __name__ == "__main__":
-    main()
 
 
 if __name__ == "__main__":
