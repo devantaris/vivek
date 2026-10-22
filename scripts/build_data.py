@@ -14,7 +14,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from pj03.preprocess import loaders_hatecheck, loaders_hatexplain  # noqa: E402
+from pj03.preprocess import (  # noqa: E402
+    loaders_hatecheck,
+    loaders_hatexplain,
+    loaders_hinglish,
+)
 from pj03.utils.logging import get_logger  # noqa: E402
 
 logger = get_logger("pj03.build")
@@ -56,7 +60,25 @@ def build_hatecheck(mode: str = "strict_hate") -> None:
     )
 
 
-BUILDERS = {"hatexplain": build_hatexplain, "hatecheck": build_hatecheck}
+def build_hinglish(mode: str = "strict_hate") -> None:
+    del mode
+    raw = REPO_ROOT / "data" / "raw" / "hinglish"
+    out = REPO_ROOT / "data" / "processed" / "hinglish_tweets"
+    stats = loaders_hinglish.build_processed(raw, out)
+    logger.info(
+        "Hinglish: test=%d positive=%d negative=%d -> %s",
+        stats.n_test,
+        stats.n_positive,
+        stats.n_negative,
+        out,
+    )
+
+
+BUILDERS = {
+    "hatexplain": build_hatexplain,
+    "hatecheck": build_hatecheck,
+    "hinglish": build_hinglish,
+}
 
 
 def main() -> None:

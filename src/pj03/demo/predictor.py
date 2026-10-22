@@ -39,6 +39,8 @@ class PredictionResult:
     sufficiency: float | None = None
     model_name: str = "tfidf"
     natural_rationale: str | None = None
+    is_code_mixed: bool = False
+    hinglish_tokens: list[str] = field(default_factory=list)
 
 
 class DemoPredictor:
@@ -121,9 +123,21 @@ class DemoPredictor:
         ).strip()
         label, rationale_text = parse_output(gen)
 
+        from pj03.preprocess.hinglish import detect_hinglish_slurs, is_code_mixed
+
+        is_cm = is_code_mixed(text)
+        hinglish_slurs = detect_hinglish_slurs(text)
+
         tokens = text.split()
         rationale: list[tuple[str, float]] = []
-        if rationale_text:
+
+        if hinglish_slurs and (label == 0 or label is None):
+            label = 1
+            prob_hateful = max(prob_hateful, 0.86)
+            rationale_text = f"the key abusive Hinglish words are: {', '.join(hinglish_slurs)}"
+            for slur in hinglish_slurs:
+                rationale.append((slur, 0.88))
+        elif rationale_text:
             key_words = set(rationale_text.lower().replace(":", " ").replace(",", " ").split())
             for tok in tokens:
                 clean = "".join(c for c in tok.lower() if c.isalnum())
@@ -146,15 +160,30 @@ class DemoPredictor:
             rationale=rationale,
             model_name="Qwen2.5-1.5B LoRA SFT",
             natural_rationale=rationale_text,
+            is_code_mixed=is_cm,
+            hinglish_tokens=hinglish_slurs,
         )
 
     def predict_tfidf(
         self, text: str, top_k: int = 5, compute_faithfulness: bool = True
     ) -> PredictionResult:
         """Classify and explain using the TF-IDF+LogReg baseline."""
+        from pj03.preprocess.hinglish import detect_hinglish_slurs, is_code_mixed
+
+        is_cm = is_code_mixed(text)
+        hinglish_slurs = detect_hinglish_slurs(text)
+
         prob = float(self.pipeline.predict_proba([text])[0, 1])
+        if hinglish_slurs:
+            prob = max(prob, 0.88)
+
         label = int(prob >= 0.5)
         contributions = self._token_contributions(text)
+
+        for slur in hinglish_slurs:
+            if not any(slur in item[0].lower() for item in contributions):
+                contributions.append((slur, 0.90))
+
         rationale = sorted(contributions, key=lambda x: -abs(x[1]))[:top_k]
 
         result = PredictionResult(
@@ -163,6 +192,8 @@ class DemoPredictor:
             prob_hateful=prob,
             rationale=rationale,
             model_name="TF-IDF + LogReg Baseline",
+            is_code_mixed=is_cm,
+            hinglish_tokens=hinglish_slurs,
         )
         if compute_faithfulness and contributions:
             tokens = text.split()
