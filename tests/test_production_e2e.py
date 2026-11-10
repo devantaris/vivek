@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-from scripts.test_production_e2e import run_e2e_verification
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.test_production_e2e import run_e2e_verification  # noqa: E402
 
 
 def test_production_e2e_suite(tmp_path: Path) -> None:

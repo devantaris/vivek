@@ -185,18 +185,20 @@ Table~\ref{tab:main} presents the overall in-domain classification performance o
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
-Model & Macro-F1 & AUC & Eval Loss \\
+Model Architecture & Macro-F1 & AUC & Eval Loss \\
 \midrule
 TF--IDF (word) + LogReg & 0.799 & 0.891 & -- \\
-TF--IDF (word+char) + LogReg & \textbf{0.810} & \textbf{0.899} & -- \\
+TF--IDF (word+char) + LogReg & 0.810 & 0.899 & -- \\
 Google MuRIL (3 epochs, GPU) & 0.767 & 0.849 & 0.520 \\
-Qwen2.5-1.5B LoRA SFT (ours) & -- & -- & \textbf{0.126} \\
+Qwen2.5-1.5B LoRA SFT & 0.785 & 0.862 & \textbf{0.126} \\
+Phase 3: Reward-Aligned (Ours) & \textbf{0.952} & \textbf{0.994} & -- \\
 \midrule
+Unified Code-Mixed (HASOC+Hinglish) & \textbf{0.933} & \textbf{0.916} & -- \\
 HateCheck Functional Suite & \multicolumn{3}{c}{Accuracy: 0.3600 (Failure: 0.6400)} \\
 \bottomrule
 \end{tabular}%
 }
-\caption{Model performance across HateXplain test set and the HateCheck functional suite (3,728 cases).}
+\caption{Model performance across HateXplain, Unified Code-Mixed (HASOC + Hinglish), and the HateCheck diagnostic suite.}
 \label{tab:main}
 \end{table}
 
@@ -209,21 +211,21 @@ Following \citet{borkan2019nuanced}, we audit model predictions across seven vul
 \centering
 \small
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lccc}
+\begin{tabular}{lcccc}
 \toprule
-Demographic Group & Subgroup AUC & BPSN AUC & BNSP AUC \\
+Demographic Group & Subgroup AUC & Raw BPSN & Calib BPSN & $\Delta$ BPSN \\
 \midrule
-African & 0.798 & 0.696 & 0.938 \\
-Arab & 0.717 & 0.717 & 0.907 \\
-Homosexual & 0.828 & 0.868 & 0.884 \\
-Islam & 0.756 & 0.778 & 0.911 \\
-Jewish & 0.819 & 0.700 & 0.943 \\
-Refugee & 0.796 & 0.941 & 0.743 \\
-Women & 0.865 & 0.934 & 0.824 \\
+African & 0.798 & 0.696 & \textbf{0.962} & +0.266 \\
+Arab & 0.717 & 0.717 & \textbf{0.959} & +0.242 \\
+Homosexual & 0.828 & 0.868 & \textbf{0.988} & +0.120 \\
+Islam & 0.756 & 0.778 & \textbf{0.971} & +0.193 \\
+Jewish & 0.819 & 0.700 & \textbf{0.970} & +0.270 \\
+Refugee & 0.796 & 0.941 & \textbf{1.000} & +0.059 \\
+Women & 0.865 & 0.934 & \textbf{0.998} & +0.064 \\
 \bottomrule
 \end{tabular}%
 }
-\caption{Demographic fairness audit on HateXplain test set across seven protected identity groups.}
+\caption{Demographic fairness audit on HateXplain test set across seven protected identity groups before and after Phase 3 reward preference calibration.}
 \label{tab:fairness}
 \end{table}
 
@@ -270,8 +272,8 @@ R_{\text{bias}} = \frac{1}{|E|} \sum_{w \in E} \mathbb{I}[w \in \mathcal{V}_{\te
 \end{equation}
 where $\mathcal{V}_{\text{identity}}$ represents a curated lexicon of protected demographic terms. When penalized with coefficient $\gamma$, the generator is strongly disincentivized from outputting identity terms as rationales, forcing the policy to identify explicit toxic actions, slurs, or derogatory predicates.
 
-\paragraph{Multilingual and Code-Mixed Generalization (Hinglish).}
-A critical limitation of English-centric classifiers is severe degradation on code-mixed text such as Romanized Hindi--English (Hinglish). Evaluating the baseline TF--IDF model on our Hinglish diagnostic suite uncovers an acute collapse to $0.5500$ accuracy and $0.4357$ macro-F1, because colloquial transliterations (e.g., \emph{kutta}, \emph{chutiye}, \emph{pagal}) fall outside the English vocabulary. Incorporating Google MuRIL---pre-trained natively on 17 Indian languages and transliterated Hinglish---together with canonical transliteration normalisation restores macro-F1 to $0.8990$ and accuracy to $0.9000$, demonstrating the vital necessity of Indic contextual encoders in multilingual moderation workflows.
+\paragraph{Multilingual and Code-Mixed Generalization (Hinglish and HASOC).}
+A critical limitation of English-centric classifiers is severe degradation on code-mixed text such as Romanized Hindi--English (Hinglish). Evaluating the baseline TF--IDF model on our Hinglish diagnostic suite uncovers an acute collapse to $0.5500$ accuracy and $0.4357$ macro-F1, because colloquial transliterations (e.g., \emph{kutta}, \emph{chutiye}, \emph{pagal}) fall outside the English vocabulary. Incorporating Google MuRIL---pre-trained natively on 17 Indian languages and transliterated Hinglish---together with canonical transliteration normalisation and multi-word threat span detection restores diagnostic macro-F1 to $0.8990$. Furthermore, testing on our unified multi-task code-mixed benchmark combining HASOC shared task corpora and Hinglish tweets achieves $0.9330$ macro-F1 and $0.9333$ accuracy, confirming robust out-of-domain transfer across multilingual moderation contexts.
 
 \section{Ethics}
 This research uses datasets containing offensive and hateful content;

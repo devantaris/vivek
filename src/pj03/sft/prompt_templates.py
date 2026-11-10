@@ -44,7 +44,7 @@ def parse_output(generation: str) -> tuple[int | None, str | None]:
     """
     label: int | None = None
     rationale: str | None = None
-    for line in generation.splitlines():
+    for line in generation.replace("|", "\n").splitlines():
         stripped = line.strip()
         if stripped.lower().startswith("label:"):
             token = stripped.split(":", 1)[1].strip()
