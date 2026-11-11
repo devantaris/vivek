@@ -38,32 +38,36 @@ def train_encoder(
     eval_texts: list[str],
     eval_labels: list[int],
     output_dir: str,
-    learning_rate: float = 2e-5,
+    learning_rate: float = 1.5e-5,
     batch_size: int = 16,
-    epochs: int = 3,
+    epochs: int = 4,
     max_length: int = 256,
     seed: int = 42,
     save_model: bool = False,
+    weighted_loss: bool = True,
+    warmup_ratio: float = 0.1,
 ) -> dict[str, float]:
     """Fine-tune a pretrained encoder for binary hate-speech classification.
 
     Args:
-        model_name: HF model id (e.g. ``xlm-roberta-base``).
+        model_name: HF model id (e.g. ``google/muril-base-cased``, ``xlm-roberta-base``).
         train_texts / train_labels: Training posts and binary labels.
         eval_texts / eval_labels: Held-out posts and labels.
-        output_dir: Where Trainer logs/metrics go (checkpoints only if
-            ``save_model``).
-        learning_rate: AdamW learning rate.
+        output_dir: Where Trainer logs/metrics go.
+        learning_rate: AdamW learning rate (default 1.5e-5).
         batch_size: Per-device batch size.
-        epochs: Training epochs.
-        max_length: Tokeniser max length (HateXplain max is ~165 tokens).
+        epochs: Training epochs (default 4).
+        max_length: Tokeniser max length.
         seed: Random seed.
-        save_model: If True, save the final model + tokenizer (disk-heavy for
-            full-size encoders; off by default).
+        save_model: If True, save final model + tokenizer.
+        weighted_loss: Balance class weights in CrossEntropyLoss.
+        warmup_ratio: Linear learning-rate warmup fraction.
 
     Returns:
         Eval metrics dict (loss, macro-F1, AUC).
     """
+    import torch
+    import torch.nn as nn
     from datasets import Dataset
     from sklearn.metrics import roc_auc_score
     from transformers import (
@@ -89,6 +93,28 @@ def train_encoder(
         tokenize, batched=True
     )
 
+    # Compute inverse class frequencies
+    weights_tensor = None
+    if weighted_loss and len(train_labels) > 0:
+        n_pos = max(sum(train_labels), 1)
+        n_neg = max(len(train_labels) - n_pos, 1)
+        total = len(train_labels)
+        w0 = total / (2.0 * n_neg)
+        w1 = total / (2.0 * n_pos)
+        weights_tensor = torch.tensor([w0, w1], dtype=torch.float)
+
+    class WeightedTrainer(Trainer):
+        def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+            labels = inputs.get("labels")
+            outputs = model(**inputs)
+            logits = outputs.logits
+            if weights_tensor is not None and labels is not None:
+                loss_fct = nn.CrossEntropyLoss(weight=weights_tensor.to(logits.device))
+                loss = loss_fct(logits.view(-1, 2), labels.view(-1))
+            else:
+                loss = outputs.loss
+            return (loss, outputs) if return_outputs else loss
+
     def compute_metrics(pred: Any) -> dict[str, float]:
         probs = _softmax(pred.predictions)
         y_pred = probs.argmax(axis=1).tolist()
@@ -105,12 +131,15 @@ def train_encoder(
         per_device_eval_batch_size=batch_size,
         num_train_epochs=epochs,
         eval_strategy="epoch",
-        save_strategy="no",  # no checkpoint bloat; save_model controls final save
+        save_strategy="no",
+        warmup_ratio=warmup_ratio,
+        weight_decay=0.01,
+        max_grad_norm=1.0,
         logging_steps=20,
-        report_to="none",  # no wandb unless explicitly configured
+        report_to="none",
         seed=seed,
     )
-    trainer = Trainer(
+    trainer = WeightedTrainer(
         model=model,
         args=args,
         train_dataset=train_ds,

@@ -108,9 +108,11 @@ class DemoPredictor:
 
         import torch
 
+        from pj03.preprocess.deobfuscator import deobfuscate_text
         from pj03.sft.prompt_templates import format_prompt, parse_output
 
-        prompt = format_prompt(text)
+        clean_text = deobfuscate_text(text)
+        prompt = format_prompt(clean_text)
         inputs = self._llm_tokenizer(prompt, return_tensors="pt")
         device = next(self._llm_model.parameters()).device
         inputs = {k: v.to(device) for k, v in inputs.items()}
@@ -190,12 +192,14 @@ class DemoPredictor:
         self, text: str, top_k: int = 5, compute_faithfulness: bool = True
     ) -> PredictionResult:
         """Classify and explain using the TF-IDF+LogReg baseline."""
+        from pj03.preprocess.deobfuscator import deobfuscate_text
         from pj03.preprocess.hinglish import detect_hinglish_slurs, is_code_mixed
 
-        is_cm = is_code_mixed(text)
-        hinglish_slurs = detect_hinglish_slurs(text)
+        clean_text = deobfuscate_text(text)
+        is_cm = is_code_mixed(clean_text)
+        hinglish_slurs = detect_hinglish_slurs(clean_text)
 
-        prob = float(self.pipeline.predict_proba([text])[0, 1])
+        prob = float(self.pipeline.predict_proba([clean_text])[0, 1])
         if hinglish_slurs:
             prob = max(prob, 0.92)
 
