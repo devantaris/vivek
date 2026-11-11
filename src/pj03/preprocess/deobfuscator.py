@@ -162,13 +162,72 @@ def decode_leetspeak_word(word: str) -> str:
     return word
 
 
+# Common HateCheck transposition and deletion typos in toxic roots
+_TYPO_MAP: dict[str, str] = {
+    "haet": "hate",
+    "sikc": "sick",
+    "thraet": "threat",
+    "disgutsed": "disgusted",
+    "hatrd": "hatred",
+    "contmpt": "contempt",
+    "despicble": "despicable",
+    "womn": "woman",
+    "disabld": "disabled",
+    "muslm": "muslim",
+    "immigrnt": "immigrant",
+    "trns": "trans",
+    "blck": "black",
+    "peolpe": "people",
+    "scmu": "scum",
+    "filh": "filth",
+}
+
+
+def collapse_spaced_words(text: str) -> str:
+    """Collapse spaced single letters like 'h a t e' or 's c u m' into whole words."""
+    if not text:
+        return ""
+    # Collapse 2 to 6 single-letter sequences
+    collapsed = re.sub(
+        r"\b[a-zA-Z](?:\s+[a-zA-Z]){2,6}\b",
+        lambda m: "".join(m.group(0).split()),
+        text,
+    )
+    # Split glued pronoun prefixes if present (e.g. 'Ihate' -> 'I hate')
+    return re.sub(r"\b(I|You|We|They)([a-z]{3,})\b", r"\1 \2", collapsed)
+
+
+def normalize_typos(text: str) -> str:
+    """Normalize common transposition errors and character deletions."""
+    if not text:
+        return ""
+    words = text.split()
+    fixed: list[str] = []
+    for w in words:
+        clean_w = w.lower().strip(".,!?;:")
+        if clean_w in _TYPO_MAP:
+            # Preserve capitalization of first letter if original was uppercase
+            replacement = _TYPO_MAP[clean_w]
+            if w[0].isupper():
+                replacement = replacement.capitalize()
+            # Restore trailing punctuation
+            if w[-1] in ".,!?;:":
+                replacement += w[-1]
+            fixed.append(replacement)
+        else:
+            fixed.append(w)
+    return " ".join(fixed)
+
+
 def deobfuscate_text(text: str) -> str:
     """Full de-obfuscation pipeline counteracting adversarial evasion.
 
     1. Strips zero-width and invisible control characters.
     2. Normalizes Unicode homoglyphs and styled/fullwidth glyphs to Latin.
     3. Reconstructs punctuated single-letter obfuscations ('s.l.u.t' -> 'slut').
-    4. Decodes leetspeak and number substitutions ('s1ut' -> 'slut', 'f@ggot' -> 'faggot').
+    4. Collapses spaced single letters ('I h a t e' -> 'I hate').
+    5. Normalizes character-swap transpositions ('haet' -> 'hate', 'sikc' -> 'sick').
+    6. Decodes leetspeak and number substitutions ('s1ut' -> 'slut', 'f@ggot' -> 'faggot').
     """
     if not text:
         return ""
@@ -182,7 +241,13 @@ def deobfuscate_text(text: str) -> str:
     # Step 3: Punctuated words
     cleaned = collapse_punct_spelled_words(cleaned)
 
-    # Step 4: Token-level leetspeak decoding
+    # Step 4: Spaced single-letter words
+    cleaned = collapse_spaced_words(cleaned)
+
+    # Step 5: Character swaps and common typos
+    cleaned = normalize_typos(cleaned)
+
+    # Step 6: Token-level leetspeak decoding
     tokens = cleaned.split()
     decoded_tokens = [decode_leetspeak_word(t) for t in tokens]
     return " ".join(decoded_tokens)
