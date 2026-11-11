@@ -204,18 +204,40 @@ HINGLISH_TOXIC_TERMS: frozenset[str] = frozenset({
     "katwe",
     "bhangi",
     "chamar",
+    # Additional terms
+    "bhosdi",
+    "rand",
+    "kutti",
+    "kutiya",
+    "khota",
+    "dhobi",
+    "neech",
+    "nalayak",
+    "haramkhor",
+    "bhikhari",
+    "besharam",
 })
 
 # Multi-word Hinglish violent / death threat patterns
+# Note: chahliye / chahiye are both common transliterations of चाहिए.
 HINGLISH_THREAT_PATTERNS: list[tuple[re.Pattern, str]] = [
-    (re.compile(r"\bmar\s+jana\s+chahiye\b", re.IGNORECASE), "mar jana chahiye"),
+    # Death / kill threats – chahiye / chahliye spelling variants
+    (re.compile(r"\bmar\s+jana\s+chah[il]*iye\b", re.IGNORECASE), "mar jana chahiye"),
     (re.compile(r"\bmar\s+jana\b", re.IGNORECASE), "mar jana"),
     (re.compile(r"\bmar\s+jao\b", re.IGNORECASE), "mar jao"),
-    (re.compile(r"\bmar\s+jaye\b", re.IGNORECASE), "mar jaye"),
+    (re.compile(r"\bmar\s+jaye[ga]?\b", re.IGNORECASE), "mar jaye"),
     (re.compile(r"\bmar\s+dalo\b", re.IGNORECASE), "mar dalo"),
+    (re.compile(r"\bmar\s+do\b", re.IGNORECASE), "mar do"),
     (re.compile(r"\bjaan\s+se\s+mar\b", re.IGNORECASE), "jaan se mar"),
-    (re.compile(r"\bgoli\s+mar\b", re.IGNORECASE), "goli maro"),
-    (re.compile(r"\bkhatam\s+kar\b", re.IGNORECASE), "khatam karo"),
+    (re.compile(r"\bgoli\s+maar?\b", re.IGNORECASE), "goli maro"),
+    (re.compile(r"\bgoli\s+maaro\b", re.IGNORECASE), "goli maro"),
+    (re.compile(r"\bkhatam\s+kar[oa]?\b", re.IGNORECASE), "khatam karo"),
+    (re.compile(r"\bkhatam\s+ho\s+ja\b", re.IGNORECASE), "khatam ho ja"),
+    # Violent action patterns
+    (re.compile(r"\bpeet\s+do\b", re.IGNORECASE), "peet do"),
+    (re.compile(r"\bkaat\s+do\b", re.IGNORECASE), "kaat do"),
+    (re.compile(r"\bjala\s+do\b", re.IGNORECASE), "jala do"),
+    (re.compile(r"\bphaank\s+do\b", re.IGNORECASE), "phaank do"),
 ]
 
 

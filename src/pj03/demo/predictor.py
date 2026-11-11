@@ -95,7 +95,13 @@ class DemoPredictor:
         logger.info("LoRA SFT model loaded successfully.")
 
     def predict_llm(self, text: str) -> PredictionResult:
-        """Classify and explain using the fine-tuned Qwen2.5-1.5B LoRA LLM."""
+        """Classify and explain using the fine-tuned Qwen2.5-1.5B LoRA LLM.
+
+        Uses an ensemble guard: the TF-IDF baseline probability is blended
+        (weight 0.35) with the LLM token logit (weight 0.65) so that a highly
+        confident TF-IDF signal can correct an LLM miscalibration.  Hinglish
+        slur / threat detection always overrides both models.
+        """
         self.load_llm()
         if self._llm_model is None or self._llm_tokenizer is None:
             return self.predict_tfidf(text)
@@ -114,7 +120,7 @@ class DemoPredictor:
             tok_1 = self._llm_tokenizer("1", add_special_tokens=False)["input_ids"][0]
             tok_0 = self._llm_tokenizer("0", add_special_tokens=False)["input_ids"][0]
             probs = torch.softmax(logits[:, [tok_0, tok_1]], dim=-1)
-            prob_hateful = float(probs[0, 1].item())
+            llm_prob = float(probs[0, 1].item())
 
             out = self._llm_model.generate(**inputs, max_new_tokens=40, do_sample=False)
 
@@ -128,13 +134,26 @@ class DemoPredictor:
         is_cm = is_code_mixed(text)
         hinglish_slurs = detect_hinglish_slurs(text)
 
+        # --- Ensemble guard: blend TF-IDF with LLM logit -----------------
+        # The LoRA SFT model (eval_loss=0.1257) can still be miscalibrated on
+        # out-of-distribution Hinglish text; blending with TF-IDF (macro-F1
+        # 0.810) anchors the probability and prevents catastrophic errors.
+        tfidf_prob = float(self.pipeline.predict_proba([text])[0, 1])
+        prob_hateful = 0.65 * llm_prob + 0.35 * tfidf_prob
+        logger.debug(
+            "Ensemble: llm=%.3f tfidf=%.3f blend=%.3f", llm_prob, tfidf_prob, prob_hateful
+        )
+
         tokens = text.split()
         rationale: list[tuple[str, float]] = []
 
         if hinglish_slurs:
+            # Hard override: Hinglish slur/threat detection always wins
             label = 1
             prob_hateful = max(prob_hateful, 0.92)
-            rationale_text = f"the key abusive/threatening Hinglish terms are: {', '.join(hinglish_slurs)}"
+            rationale_text = (
+                f"the key abusive/threatening Hinglish terms are: {', '.join(hinglish_slurs)}"
+            )
             for slur in hinglish_slurs:
                 rationale.insert(0, (slur, 0.95))
         elif rationale_text:
@@ -153,7 +172,7 @@ class DemoPredictor:
             contributions = self._token_contributions(text)
             rationale = sorted(contributions, key=lambda x: -abs(x[1]))[:5]
 
-        # Enforce consistency: label strictly reflects prob_hateful >= 0.5
+        # Enforce consistency: label strictly reflects blended prob_hateful >= 0.5
         final_label = 1 if prob_hateful >= 0.5 else 0
 
         return PredictionResult(
@@ -161,7 +180,7 @@ class DemoPredictor:
             label=final_label,
             prob_hateful=prob_hateful,
             rationale=rationale,
-            model_name="Qwen2.5-1.5B LoRA SFT",
+            model_name="Qwen2.5-1.5B LoRA SFT + TF-IDF Ensemble",
             natural_rationale=rationale_text,
             is_code_mixed=is_cm,
             hinglish_tokens=hinglish_slurs,

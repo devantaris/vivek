@@ -96,7 +96,7 @@ def _model_card_md() -> str:
     md = "## PJ-03 Multi-Phase Model Card & Leaderboard\n\n"
     md += "| Model Architecture | Phase | Status | Key Evaluation Metric | Notes |\n"
     md += "|---|---|---|---|---|\n"
-    md += "| **Qwen2.5-1.5B LoRA SFT** | Phase 2 (LLM) | **Trained (Colab T4)** | `eval_loss: 0.1257` | Emits natural language rationales + predictions |\n"
+    md += "| **Qwen2.5-1.5B LoRA SFT + TF-IDF Ensemble** | Phase 2 (LLM) | **Trained (Colab T4)** | `eval_loss: 0.1257` | Blended 65% LLM + 35% TF-IDF; natural language rationales |\n"
     md += "| **Google MuRIL** | Phase 1 (Deep Encoder) | **Trained (Colab T4)** | `macro_f1: 0.7669`, `auc: 0.8494` | Pre-trained for Indian languages & Hinglish |\n"
     md += "| **TF-IDF + LogReg** | Phase 1 (Baseline) | **Trained (CPU)** | `macro_f1: 0.8096`, `auc: 0.8987` | N-gram linear classifier baseline |\n"
     md += "| **HateCheck Suite** | Phase 4 (Functional) | **Evaluated** | `accuracy: 0.3600` | 29 functional tests across 3,728 cases |\n\n"
@@ -192,3 +192,4 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=7860)
     args = parser.parse_args()
     main(args.artifact, args.port)
+
