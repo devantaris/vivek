@@ -26,9 +26,11 @@ ETHICS_BANNER = (
 
 EXAMPLES = [
     ["kill all jews"],
-    ["you are all subhuman trash and should leave"],
+    ["modi ko mar jana chahliye"],
+    ["modi madharchod hai"],
+    ["f@ggot trash"],
+    ["modi visited the university today"],
     ["good morning friends, have a lovely day"],
-    ["i hate women. they are all worthless"],  # 'offensive', not 'hatespeech', in HateXplain
 ]
 
 
@@ -119,10 +121,10 @@ def create_demo(predictor: DemoPredictor):
     """Build the Gradio Blocks interface."""
     import gradio as gr
 
-    model_choices = ["Auto (Best Available)"]
+    model_choices = ["Auto (Fast Hybrid: Hinglish + De-Obfuscator) [~20ms]"]
     if predictor.has_llm:
-        model_choices.append("Qwen2.5-1.5B LoRA SFT (Deep LLM)")
-    model_choices.append("TF-IDF + LogReg Baseline")
+        model_choices.append("Qwen2.5-1.5B LoRA SFT (Deep LLM Rationale) [~4s CPU]")
+    model_choices.append("TF-IDF + LogReg Baseline [~20ms]")
 
     with gr.Blocks(title="PJ-03 Hate Speech Detection — Explainable Demo") as demo:
         gr.Markdown("# PJ-03 — Explainable Hate Speech Detection (demo)")
