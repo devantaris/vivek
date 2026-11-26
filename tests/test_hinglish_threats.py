@@ -61,6 +61,10 @@ def test_violent_threat_patterns(text: str) -> None:
         "woh behenchod hai",
         "chutiye log",
         "haramzade",
+        "sare muslims gawar hain",
+        "ye log jahil aur deshdrohi hain",
+        "sar tan se juda karo",
+        "kutte ki aulad chup reh",
     ],
 )
 def test_toxic_term_detection(text: str) -> None:
