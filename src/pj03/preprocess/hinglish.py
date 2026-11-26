@@ -229,8 +229,12 @@ HINGLISH_THREAT_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"\bmar\s+dalo\b", re.IGNORECASE), "mar dalo"),
     (re.compile(r"\bmar\s+do\b", re.IGNORECASE), "mar do"),
     (re.compile(r"\bjaan\s+se\s+mar\b", re.IGNORECASE), "jaan se mar"),
-    (re.compile(r"\bgoli\s+maar?\b", re.IGNORECASE), "goli maro"),
+    # goli maar/maro/maaro/maard do — covers all imperative shooting threat variants
+    # e.g. "goli maro", "goli maar do", "goli maard do" (double-a imperative form)
+    (re.compile(r"\bgoli\s+maar[d]?\s+do\b", re.IGNORECASE), "goli maard do"),
+    (re.compile(r"\bgoli\s+maar[d]?\b", re.IGNORECASE), "goli maro"),
     (re.compile(r"\bgoli\s+maaro\b", re.IGNORECASE), "goli maro"),
+    (re.compile(r"\bgoli\s+maro\b", re.IGNORECASE), "goli maro"),
     (re.compile(r"\bkhatam\s+kar[oa]?\b", re.IGNORECASE), "khatam karo"),
     (re.compile(r"\bkhatam\s+ho\s+ja\b", re.IGNORECASE), "khatam ho ja"),
     # Violent action patterns
